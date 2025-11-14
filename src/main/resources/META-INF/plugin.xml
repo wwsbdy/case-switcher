@@ -1,0 +1,49 @@
+<idea-plugin>
+    <id>com.zj.case-switcher</id>
+    <name>Case Switcher</name>
+
+    <vendor>wwsbdy</vendor>
+
+    <description><![CDATA[
+        <h2>Case Switcher</h2>
+        <p>Use <b>Shift + Alt + ,</b> and <b>Shift + Alt + .</b> to quickly cycle selected text through different naming styles.</p>
+        <ul>
+          <li>Supported naming styles:</li>
+          <ul>
+            <li>camelCase</li>
+            <li>CamelCase</li>
+            <li>camel_case</li>
+            <li>CAMEL_CASE</li>
+            <li>camel-case</li>
+            <li>CAMEL-CASE</li>
+            <li>camel case</li>
+            <li>Camel Case</li>
+            <li>CAMEL CASE</li>
+          </ul>
+          <li>Settings page allows you to enable/disable styles and adjust their order of cycling.</li>
+        </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="CaseSwitcher" displayType="BALLOON"/>
+        <applicationConfigurable id="com.zj.CaseModelSettingsConfigurable"
+                                 instance="com.zj.caseswitcher.setting.CaseModelSettingsConfigurable"
+                                 displayName="Case Switcher"/>
+        <applicationService id="com.zj.CaseModelSettings"
+                            serviceImplementation="com.zj.caseswitcher.setting.CaseModelSettings"/>
+    </extensions>
+    <actions>
+        <action id="com.zj.CaseUpAction" class="com.zj.caseswitcher.CaseUpAction"
+                text="Case Up Switcher">
+            <add-to-group group-id="EditSmartGroup" anchor="after" relative-to-action="EditorToggleCase"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift alt COMMA"/>
+        </action>
+        <action id="com.zj.CaseNextAction" class="com.zj.caseswitcher.CaseNextAction"
+                text="Case Next Switcher">
+            <add-to-group group-id="EditSmartGroup" anchor="after" relative-to-action="EditorToggleCase"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift alt PERIOD"/>
+        </action>
+    </actions>
+</idea-plugin>
