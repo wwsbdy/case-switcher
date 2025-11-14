@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.zj"
-version = "${properties("plugin.version")}-SNAPSHOT"
+version = properties("plugin.version")
 
 intellij {
     version.set(properties("intellij.version"))
