@@ -28,6 +28,11 @@ public enum CaseModelEnum {
     @Deprecated
     LOWER("lower", LowerCaseModel.INSTANCE, 3),
 
+    /**
+     * 重置，防止连续转换时，回不到初始文本
+     * <p>
+     * 不给用户展示
+     */
     RESET("reset", ResetCaseModel.INSTANCE, 0, 1),
     ;
 

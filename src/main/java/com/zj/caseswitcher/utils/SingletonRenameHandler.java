@@ -21,6 +21,7 @@ import com.intellij.refactoring.util.CommonRefactoringUtil;
 import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.setting.CaseModelSettings;
 import com.zj.caseswitcher.utils.log.Logger;
+import com.zj.caseswitcher.vo.CacheVo;
 import com.zj.caseswitcher.vo.CaretVo;
 import com.zj.caseswitcher.vo.CaseVo;
 import com.zj.caseswitcher.vo.ToggleState;
@@ -42,7 +43,7 @@ public class SingletonRenameHandler {
 
     public static void rename(boolean up,
                               @NotNull CaretVo caretVo,
-                              @NotNull List<ToggleState> toggleStateList,
+                              @NotNull CacheVo cacheVo,
                               @NotNull Editor editor,
                               @NotNull Project project,
                               @NotNull DataContext dataContext) {
@@ -51,10 +52,13 @@ public class SingletonRenameHandler {
         if (StringUtils.isEmpty(selectedText)) {
             return;
         }
+        List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
         if (toggleStateList.size() != 1) {
             logger.info("singletonRename carets size is not equal to toggle list size");
             toggleStateList.clear();
-            toggleStateList.add(new ToggleState(selectedText, selectedText, CaseUtils.judgment(selectedText)));
+            CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
+            toggleStateList.add(new ToggleState(selectedText, selectedText, caseModelEnum));
+            cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(up, caseModelEnum));
         }
         ToggleState toggleState = null;
         if (CollectionUtils.isNotEmpty(toggleStateList)) {
@@ -66,20 +70,21 @@ public class SingletonRenameHandler {
                 toggleState.setSelectedText(selectedText);
                 CaseModelEnum caseModel = CaseUtils.judgment(selectedText);
                 toggleState.setCaseModelEnum(caseModel);
+                cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(up, caseModel));
             }
             logger.info("singletonRename toggleState: " + toggleState);
         }
         if (Objects.isNull(toggleState)) {
-            toggleState = new ToggleState(selectedText, selectedText, CaseUtils.judgment(selectedText));
+            CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
+            toggleState = new ToggleState(selectedText, selectedText, caseModelEnum);
         }
         // 尝试使用 RenameProcessor 改名，其他使用这个变量的地方同步改名
         if (CaseModelSettings.getInstance().isRenameRelated()
-                && tryRenameRelated(up, toggleState, project, dataContext, editor, caretVo)) {
+                && tryRenameRelated(up, toggleState, project, dataContext, editor, caretVo, cacheVo.getAllCaseModelEnums())) {
             return;
         }
         // 只改当前变量名
-        // 只有一个选择文本时，找到直到一个有变化的转换
-        singletonRename(up, editor, project, toggleState, caret);
+        singletonRename(up, editor, project, toggleState, caret, cacheVo.getAllCaseModelEnums());
         logger.info("singletonRename toggleState next: " + toggleState);
     }
 
@@ -87,8 +92,9 @@ public class SingletonRenameHandler {
                                         @NotNull Editor editor,
                                         @NotNull Project project,
                                         @NotNull ToggleState toggleState,
-                                        @NotNull Caret caret) {
-        CaseVo caseVo = CaseUtils.tryConvert(up, toggleState);
+                                        @NotNull Caret caret,
+                                        @NotNull List<CaseModelEnum> allCaseModelEnums) {
+        CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModelEnums);
         String next = caseVo.getAfterText();
         Document document = editor.getDocument();
         WriteCommandAction.runWriteCommandAction(project, () ->
@@ -107,7 +113,8 @@ public class SingletonRenameHandler {
                                             @NotNull Project project,
                                             @Nullable DataContext dataContext,
                                             @NotNull Editor editor,
-                                            @NotNull CaretVo caretVo) {
+                                            @NotNull CaretVo caretVo,
+                                            @NotNull List<CaseModelEnum> allCaseModelEnums) {
         if (Objects.isNull(dataContext)) {
             return false;
         }
@@ -129,7 +136,7 @@ public class SingletonRenameHandler {
             }
             VirtualFile vFile = psiFile.getVirtualFile();
             if (vFile == null || !vFile.isWritable()) {
-                singletonRename(up, editor, project, toggleState, caretVo.getCaret());
+                singletonRename(up, editor, project, toggleState, caretVo.getCaret(), allCaseModelEnums);
                 HintManager.getInstance().showInformationHint(editor, "File is read-only");
                 logger.info("tryRenameRelated cannot modify read-only file");
                 return true;
@@ -146,7 +153,7 @@ public class SingletonRenameHandler {
             }
             NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
             // 验证命名是否有效
-            CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, text -> validator.isIdentifier(text, project));
+            CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModelEnums, text -> validator.isIdentifier(text, project));
             String next = caseVo.getAfterText();
             if (next.equals(toggleState.getSelectedText())) {
 //                    HintManager.getInstance().showInformationHint(editor, "Identifier is invalid");
@@ -166,7 +173,7 @@ public class SingletonRenameHandler {
         return false;
     }
 
-    private static PsiNamedElement findNamedElement(PsiElement e) {
+    private static @Nullable PsiNamedElement findNamedElement(PsiElement e) {
         if (e == null) {
             return null;
         }

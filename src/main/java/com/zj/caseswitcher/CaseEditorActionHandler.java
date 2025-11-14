@@ -12,8 +12,8 @@ import com.zj.caseswitcher.utils.CaseUtils;
 import com.zj.caseswitcher.utils.MultiRenameHandler;
 import com.zj.caseswitcher.utils.SingletonRenameHandler;
 import com.zj.caseswitcher.utils.log.Logger;
+import com.zj.caseswitcher.vo.CacheVo;
 import com.zj.caseswitcher.vo.CaretVo;
-import com.zj.caseswitcher.vo.ToggleState;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -35,7 +35,7 @@ public class CaseEditorActionHandler extends EditorActionHandler {
     /**
      * 缓存上一次切换状态（全局）
      */
-    private static final Map<String, List<ToggleState>> TOGGLE_MAP = new HashMap<>();
+    private static final Map<String, CacheVo> CACHE_MAP = new HashMap<>();
 
     private final boolean up;
 
@@ -66,11 +66,11 @@ public class CaseEditorActionHandler extends EditorActionHandler {
         List<CaretVo> caretVoList = carets.stream().map(caret -> new CaretVo(caret, selectedText(editor, caret)))
                 .filter(caretVo -> StringUtils.isNotEmpty(caretVo.getSelectTest()))
                 .collect(Collectors.toList());
-        List<ToggleState> toggleStateList = getCache(editor);
+        CacheVo cache = getCache(editor);
         if (caretVoList.size() == 1) {
-            SingletonRenameHandler.rename(up, caretVoList.get(0), toggleStateList, editor, project, dataContext);
+            SingletonRenameHandler.rename(up, caretVoList.get(0), cache, editor, project, dataContext);
         } else {
-            MultiRenameHandler.rename(up, caretVoList, toggleStateList, editor, project);
+            MultiRenameHandler.rename(up, caretVoList, cache, editor, project);
         }
 //        registerCaretListener(editor);
     }
@@ -91,11 +91,11 @@ public class CaseEditorActionHandler extends EditorActionHandler {
     }
 
     public static void clearCache(@NotNull Editor editor) {
-        TOGGLE_MAP.remove(editor.toString());
+        CACHE_MAP.remove(editor.toString());
     }
 
-    public static List<ToggleState> getCache(@NotNull Editor editor) {
-        return TOGGLE_MAP.computeIfAbsent(editor.toString(), key -> new ArrayList<>());
+    public static @NotNull CacheVo getCache(@NotNull Editor editor) {
+        return CACHE_MAP.computeIfAbsent(editor.toString(), key -> new CacheVo(new ArrayList<>(), new ArrayList<>()));
     }
 
     private @NotNull String selectedText(Editor editor, Caret caret) {
