@@ -7,6 +7,7 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.utils.log.Logger;
+import com.zj.caseswitcher.vo.CacheVo;
 import com.zj.caseswitcher.vo.CaretVo;
 import com.zj.caseswitcher.vo.CaseVo;
 import com.zj.caseswitcher.vo.ToggleState;
@@ -26,12 +27,14 @@ public class MultiRenameHandler {
 
     public static void rename(boolean up,
                               @NotNull List<CaretVo> caretVoList,
-                              @NotNull List<ToggleState> toggleStateList,
+                              @NotNull CacheVo cacheVo,
                               @NotNull Editor editor,
                               @NotNull Project project) {
-        resetIfChanged(caretVoList, toggleStateList);
+        resetIfChanged(up, caretVoList, cacheVo);
         // 找到至少有变化的第一个作为下一个命名风格
-        List<CaseVo> caseVoList = CaseUtils.tryConvert(up, toggleStateList, toggleStateList.get(0).getCaseModelEnum());
+        List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
+        List<CaseVo> caseVoList =
+                CaseUtils.tryConvert(up, toggleStateList, toggleStateList.get(0).getCaseModelEnum(), cacheVo.getAllCaseModelEnums());
         if (CollectionUtils.isNotEmpty(caseVoList) && caseVoList.size() == caretVoList.size()) {
             logger.info("multiRename new logic before:" + toggleStateList.get(0).getCaseModelEnum());
             for (int i = 0; i < caseVoList.size(); i++) {
@@ -62,10 +65,11 @@ public class MultiRenameHandler {
                 toggleState = toggleStateList.get(i);
             }
             if (toggleState == null) {
-                toggleState = new ToggleState(selectedText, selectedText, CaseUtils.judgment(selectedText));
+                CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
+                toggleState = new ToggleState(selectedText, selectedText, caseModelEnum);
             }
             // 判断下一个命名风格
-            CaseModelEnum nextCaseModel = CaseUtils.getNextCaseModel(up, toggleState.getCaseModelEnum());
+            CaseModelEnum nextCaseModel = CaseUtils.getNextCaseModel(up, toggleState.getCaseModelEnum(), cacheVo.getAllCaseModelEnums());
             toggleState.setCaseModelEnum(nextCaseModel);
             String next = nextCaseModel.getConvert().convert(toggleState.getOriginalText());
             toggleState.setSelectedText(next);
@@ -77,7 +81,8 @@ public class MultiRenameHandler {
         }
     }
 
-    private static void resetIfChanged(@NotNull List<CaretVo> caretVoList, @NotNull List<ToggleState> toggleStateList) {
+    private static void resetIfChanged(boolean up, @NotNull List<CaretVo> caretVoList, @NotNull CacheVo cacheVo) {
+        List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
         boolean isChanged = toggleStateList.size() != caretVoList.size();
         if (!isChanged) {
             for (int i = 0; i < caretVoList.size(); i++) {
@@ -101,8 +106,12 @@ public class MultiRenameHandler {
             List<String> selectedTexts = caretVoList.stream().map(CaretVo::getSelectTest)
                     .collect(Collectors.toList());
             CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedTexts);
+            List<CaseModelEnum> allCaseModelEnums = CaseUtils.getAllCaseModel(up, caseModelEnum);
+            cacheVo.setAllCaseModelEnums(allCaseModelEnums);
             for (String selectedText : selectedTexts) {
-                toggleStateList.add(new ToggleState(selectedText, selectedText, caseModelEnum));
+                // 当前类型设置为RESET，因为RESET在allCaseModelEnums中是caseModelEnum的上一位，可能其他文本可以被caseModelEnum转换
+                // 直接设置成caseModelEnum会跳过这个caseModelEnum只能等下次循环后才能到caseModelEnum
+                toggleStateList.add(new ToggleState(selectedText, selectedText, CaseModelEnum.RESET));
             }
         }
     }

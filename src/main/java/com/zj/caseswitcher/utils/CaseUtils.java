@@ -47,7 +47,7 @@ public class CaseUtils {
     /**
      * 判断当前命名风格
      */
-    public static @NotNull CaseModelEnum judgment(List<String> texts) {
+    public static @NotNull CaseModelEnum judgment(@Nullable List<String> texts) {
         if (CollectionUtils.isEmpty(texts)) {
             return CaseModelEnum.RESET;
         }
@@ -71,7 +71,10 @@ public class CaseUtils {
         return CaseModelEnum.RESET;
     }
 
-    public static List<CaseModelEnum> getAllCaseModel() {
+    /**
+     * 获取所有命名风格
+     */
+    public static @NotNull List<CaseModelEnum> getAllCaseModel() {
         List<CaseModelEnum> list = new ArrayList<>();
         // 这个不给用户展示
         list.add(CaseModelEnum.RESET);
@@ -80,7 +83,57 @@ public class CaseUtils {
         return list;
     }
 
-    public static List<CaseModelEnum> getConfiguredCaseModel() {
+    /**
+     * 获取所有命名风格
+     * <p>
+     * 此方法与 {@link #getAllCaseModel()} 的区别是，
+     * 此方法将重置逻辑放到当前命名风格前面，避免B->C->B->A->B->C(理论上是B->C->A->B->C->...)
+     * 因为第二个B是一轮循环以后开头的{@link CaseModelEnum#RESET}重置的
+     * <p>
+     * 如果放到当前类型的前面就不会有这个问题，插件会跳过相同的文本
+     *
+     * @param up                    判断查找顺序
+     * @param originalCaseModelEnum 原始命名风格
+     * @return 根据当前风格和顺序插入 {@link CaseModelEnum#RESET}
+     */
+    public static @NotNull List<CaseModelEnum> getAllCaseModel(boolean up, @Nullable CaseModelEnum originalCaseModelEnum) {
+        if (originalCaseModelEnum == null) {
+            return getAllCaseModel();
+        }
+        List<CaseModelEnum> list = getConfiguredCaseModel();
+        if (CollectionUtils.isEmpty(list)) {
+            list.add(CaseModelEnum.RESET);
+            return list;
+        }
+        if (originalCaseModelEnum == CaseModelEnum.RESET) {
+            return list;
+        }
+        // 将REST放到originalCaseModelEnum前面
+        int index = -1;
+        for (int i = 0; i < list.size(); i++) {
+            CaseModelEnum caseModelEnum = list.get(i);
+            if (caseModelEnum.equals(originalCaseModelEnum)) {
+                index = i;
+                break;
+            }
+        }
+        if (index != -1) {
+            if (up) {
+                if (index == list.size() - 1) {
+                    list.add(CaseModelEnum.RESET);
+                } else {
+                    list.add(index + 1, CaseModelEnum.RESET);
+                }
+            } else {
+                list.add(index, CaseModelEnum.RESET);
+            }
+        } else {
+            list.add(0, CaseModelEnum.RESET);
+        }
+        return list;
+    }
+
+    public static @NotNull List<CaseModelEnum> getConfiguredCaseModel() {
         return CaseModelSettings.getInstance().getOrderOrDefault().stream()
                 .filter(CaseModelEnumVo::getEnabled)
                 .map(CaseModelEnumVo::getCaseModelEnum)
@@ -88,8 +141,9 @@ public class CaseUtils {
                 .collect(Collectors.toList());
     }
 
-    public static CaseModelEnum getNextCaseModel(boolean up, CaseModelEnum caseModel) {
-        List<CaseModelEnum> allCaseModel = getAllCaseModel();
+    public static @NotNull CaseModelEnum getNextCaseModel(boolean up,
+                                                          @NotNull CaseModelEnum caseModel,
+                                                          @NotNull List<CaseModelEnum> allCaseModel) {
         if (CollectionUtils.isEmpty(allCaseModel)) {
             return CaseModelEnum.RESET;
         }
@@ -127,14 +181,18 @@ public class CaseUtils {
         return CaseModelEnum.RESET;
     }
 
-    public static CaseVo tryConvert(boolean up,
-                                    @NotNull ToggleState toggleState) {
-        return tryConvert(up, toggleState, null);
+    public static @NotNull CaseVo tryConvert(boolean up,
+                                             @NotNull ToggleState toggleState,
+                                             @NotNull List<CaseModelEnum> allCaseModelEnums) {
+        return tryConvert(up, toggleState, allCaseModelEnums, null);
     }
 
-    public static CaseVo tryConvert(boolean up,
-                                    @NotNull ToggleState toggleState, @Nullable Function<String, Boolean> func) {
-        List<CaseVo> caseVoList = tryConvert(up, Collections.singletonList(toggleState), toggleState.getCaseModelEnum(), func);
+    public static @NotNull CaseVo tryConvert(boolean up,
+                                             @NotNull ToggleState toggleState,
+                                             @NotNull List<CaseModelEnum> allCaseModelEnums,
+                                             @Nullable Function<String, Boolean> func) {
+        List<CaseVo> caseVoList =
+                tryConvert(up, Collections.singletonList(toggleState), toggleState.getCaseModelEnum(), allCaseModelEnums, func);
         if (CollectionUtils.isEmpty(caseVoList)) {
             String selectedText = toggleState.getSelectedText();
             CaseModelEnum caseModelEnum = toggleState.getCaseModelEnum();
@@ -145,8 +203,9 @@ public class CaseUtils {
 
     public static @NotNull List<CaseVo> tryConvert(boolean up,
                                                    @NotNull List<ToggleState> toggleStateList,
-                                                   @NotNull CaseModelEnum caseModel) {
-        return tryConvert(up, toggleStateList, caseModel, null);
+                                                   @NotNull CaseModelEnum caseModel,
+                                                   @NotNull List<CaseModelEnum> allCaseModelEnums) {
+        return tryConvert(up, toggleStateList, caseModel, allCaseModelEnums, null);
     }
 
     /**
@@ -158,12 +217,13 @@ public class CaseUtils {
     public static @NotNull List<CaseVo> tryConvert(boolean up,
                                                    @NotNull List<ToggleState> toggleStateList,
                                                    @NotNull CaseModelEnum caseModel,
+                                                   @NotNull List<CaseModelEnum> allCaseModelEnums,
                                                    @Nullable Function<String, Boolean> func) {
         if (CollectionUtils.isEmpty(toggleStateList)) {
             return Collections.emptyList();
         }
         List<CaseVo> caseVoList = new ArrayList<>();
-        CaseModelEnum nextCaseModel = getNextCaseModel(up, caseModel);
+        CaseModelEnum nextCaseModel = getNextCaseModel(up, caseModel, allCaseModelEnums);
         // 找到toggleStateList中第一个有变化的命名风格
         boolean changed = false;
         // 最多循环两遍，避免死循环
@@ -184,7 +244,7 @@ public class CaseUtils {
             if (changed) {
                 break;
             }
-            nextCaseModel = getNextCaseModel(up, nextCaseModel);
+            nextCaseModel = getNextCaseModel(up, nextCaseModel, allCaseModelEnums);
         }
         for (ToggleState toggleState : toggleStateList) {
             caseVoList.add(new CaseVo(toggleState.getSelectedText(),
