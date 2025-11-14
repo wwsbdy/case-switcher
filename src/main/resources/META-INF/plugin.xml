@@ -27,7 +27,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <notificationGroup id="CaseSwitcher" displayType="BALLOON"/>
+<!--        <notificationGroup id="CaseSwitcher" displayType="BALLOON"/>-->
         <applicationConfigurable id="com.zj.CaseModelSettingsConfigurable"
                                  instance="com.zj.caseswitcher.setting.CaseModelSettingsConfigurable"
                                  displayName="Case Switcher"/>
