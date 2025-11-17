@@ -1,7 +1,6 @@
 package com.zj.caseswitcher.vo;
 
 import com.zj.caseswitcher.enums.CaseModelEnum;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
  * @date : 2025/11/7
  */
 @Data
-@AllArgsConstructor
 public class ToggleState {
     /**
      * 当前选中的文本
@@ -27,5 +25,16 @@ public class ToggleState {
      */
     @NotNull
     private CaseModelEnum caseModelEnum;
+
+    /**
+     * 是否关联
+     */
+    private boolean related;
+
+    public ToggleState(@NotNull String selectedText, @NotNull String originalText, @NotNull CaseModelEnum caseModelEnum) {
+        this.selectedText = selectedText;
+        this.originalText = originalText;
+        this.caseModelEnum = caseModelEnum;
+    }
 
 }
