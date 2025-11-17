@@ -8,16 +8,14 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.actionSystem.CaretSpecificDataContext;
+import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.FileIndexFacade;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiNamedElement;
+import com.intellij.psi.*;
 import com.intellij.psi.search.ProjectScopeImpl;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.refactoring.rename.RenameProcessor;
-import com.intellij.refactoring.util.CommonRefactoringUtil;
 import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.setting.CaseModelSettings;
 import com.zj.caseswitcher.utils.log.Logger;
@@ -86,6 +84,9 @@ public class SingletonRenameHandler {
         // 只改当前变量名
         singletonRename(up, editor, project, toggleState, caret, cacheVo.getAllCaseModelEnums());
         logger.info("singletonRename toggleState next: " + toggleState);
+        if (toggleState.isRelated()) {
+            HintManager.getInstance().showErrorHint(editor, "Same identifier not modified");
+        }
     }
 
     private static void singletonRename(boolean up,
@@ -119,17 +120,11 @@ public class SingletonRenameHandler {
             return false;
         }
         try {
-            // 如果是 PSI 命名元素，则走 RenameProcessor 更新引用
-            PsiElement[] psiElementArray = CommonRefactoringUtil.getPsiElementArray(CaretSpecificDataContext.create(dataContext, caretVo.getCaret()));
-            if (psiElementArray.length != 1) {
-                logger.info("tryRenameRelated psiElementArray size{" + psiElementArray.length + "} is not equal to 1");
+            PsiNamedElement element = getPsiNamedElement(project, editor, caretVo.getCaret());
+            logger.info("tryRenameRelated element: " + element);
+            if (Objects.isNull(element)) {
                 return false;
             }
-//            PsiFile psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument());
-//            if (psiFile != null) {
-//                PsiElement element = psiFile.findElementAt(caret.getOffset());
-//            }
-            PsiElement element = psiElementArray[0];
             PsiFile psiFile = element.getContainingFile();
             if (psiFile == null) {
                 return false;
@@ -141,13 +136,7 @@ public class SingletonRenameHandler {
                 logger.info("tryRenameRelated cannot modify read-only file");
                 return true;
             }
-            logger.info("tryRenameRelated element: " + element);
-            PsiNamedElement named = findNamedElement(element);
-            logger.info("tryRenameRelated named: " + named);
-            if (Objects.isNull(named)) {
-                return false;
-            }
-            if (!toggleState.getSelectedText().equals(named.getName())) {
+            if (!toggleState.getSelectedText().equals(element.getName())) {
                 logger.info("tryRenameRelated name not equals");
                 return false;
             }
@@ -160,12 +149,15 @@ public class SingletonRenameHandler {
                 logger.info("tryRenameRelated next is not a valid identifier");
                 return true;
             }
-            RenameProcessor renameProcessor = new RenameProcessor(project, named, next, new ProjectScopeImpl(project, FileIndexFacade.getInstance(project)), false, false);
+            RenameProcessor renameProcessor = new RenameProcessor(project, element, next,
+                    new ProjectScopeImpl(project, FileIndexFacade.getInstance(project)),
+                    false, false);
             renameProcessor.run();
             // 更新选择的文本
             toggleState.setCaseModelEnum(caseVo.getAfterCaseModelEnum());
             toggleState.setSelectedText(next);
-            logger.info("singletonRename toggleState next: " + toggleState);
+            logger.info("tryRenameRelated toggleState next: " + toggleState);
+            toggleState.setRelated(true);
             return true;
         } catch (Exception e) {
             logger.error(e);
@@ -173,13 +165,67 @@ public class SingletonRenameHandler {
         return false;
     }
 
-    private static @Nullable PsiNamedElement findNamedElement(PsiElement e) {
-        if (e == null) {
+    private static PsiNamedElement getPsiNamedElement(Project project, Editor editor, Caret caret) {
+        PsiFile psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument());
+        if (psiFile == null) {
+            logger.warn("psiFile is null");
             return null;
         }
-        if (e instanceof PsiNamedElement) {
-            return (PsiNamedElement) e;
+
+        int start = caret.getSelectionStart();
+        int end = caret.getSelectionEnd();
+        if (start >= end) {
+            logger.warn("start >= end");
+            return null;
+        }
+        return findSymbolToRename(project, psiFile, start, end);
+    }
+
+    public static PsiNamedElement findSymbolToRename(Project project, PsiFile psiFile, int startOffset, int endOffset) {
+        // 1) 通过引用查（最准确）
+        PsiReference ref = psiFile.findReferenceAt(startOffset);
+        if (ref == null && endOffset > startOffset) {
+            ref = psiFile.findReferenceAt(endOffset - 1);
+        }
+        if (ref != null) {
+            PsiNamedElement resolved = resolve(project, ref);
+            if (Objects.nonNull(resolved)) {
+                return resolved;
+            }
+        }
+
+        // 2) 通过 identifier token 查
+        PsiElement element = psiFile.findElementAt(startOffset);
+        if (element instanceof PsiNameIdentifierOwner) {
+            PsiElement parent = element.getParent();
+            if (parent instanceof PsiNamedElement) {
+                logger.info("findSymbolToRename parent: " + parent);
+                return (PsiNamedElement) parent;
+            }
+        }
+
+        // 3) 用 commonParent（最不可靠，但可兜底）
+        PsiElement startElement = psiFile.findElementAt(startOffset);
+        PsiElement endElement = psiFile.findElementAt(endOffset - 1);
+        if (Objects.isNull(startElement)) {
+            return Objects.isNull(endElement) || !(endElement instanceof PsiNamedElement) ? null : (PsiNamedElement) endElement;
+        }
+        if (Objects.isNull(endElement)) {
+            return null;
+        }
+        // 寻找两者最近公共父节点
+        PsiElement commonParent = PsiTreeUtil.findCommonParent(startElement, endElement);
+        if (commonParent instanceof PsiNamedElement) {
+            return (PsiNamedElement) commonParent;
         }
         return null;
+    }
+
+    private static PsiNamedElement resolve(Project project, PsiReference ref) {
+        return DumbService.getInstance(project)
+                .computeWithAlternativeResolveEnabled(() -> {
+                    PsiElement resolved = ref.resolve();
+                    return resolved instanceof PsiNamedElement ? (PsiNamedElement) resolved : null;
+                });
     }
 }

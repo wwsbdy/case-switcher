@@ -115,7 +115,7 @@ public class CaseModelSettingsConfigurable implements Configurable {
         // 支持拖拽排序
         list.setDragEnabled(true);
         list.setDropMode(DropMode.INSERT);
-        list.setTransferHandler(new ListItemTransferHandler<>(list));
+        list.setTransferHandler(new ListItemTransferHandler());
         return list;
     }
 
