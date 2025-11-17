@@ -97,15 +97,12 @@ public class CaseUtils {
      * @return 根据当前风格和顺序插入 {@link CaseModelEnum#RESET}
      */
     public static @NotNull List<CaseModelEnum> getAllCaseModel(boolean up, @Nullable CaseModelEnum originalCaseModelEnum) {
-        if (originalCaseModelEnum == null) {
+        if (originalCaseModelEnum == null || originalCaseModelEnum == CaseModelEnum.RESET) {
             return getAllCaseModel();
         }
         List<CaseModelEnum> list = getConfiguredCaseModel();
         if (CollectionUtils.isEmpty(list)) {
             list.add(CaseModelEnum.RESET);
-            return list;
-        }
-        if (originalCaseModelEnum == CaseModelEnum.RESET) {
             return list;
         }
         // 将REST放到originalCaseModelEnum前面
@@ -151,7 +148,7 @@ public class CaseUtils {
         for (int group : caseModel.getGroups()) {
             groupSet.add(group);
         }
-        boolean find = caseModel == CaseModelEnum.RESET;
+        boolean find = false;
         int foundIndex = -1;
         NextVo nextVo = new NextVo(up, allCaseModel.size());
         for (; nextVo.condition(); nextVo.after()) {

@@ -196,7 +196,7 @@ public class SingletonRenameHandler {
 
         // 2) 通过 identifier token 查
         PsiElement element = psiFile.findElementAt(startOffset);
-        if (element instanceof PsiNameIdentifierOwner) {
+        if (Objects.nonNull(element)) {
             PsiElement parent = element.getParent();
             if (parent instanceof PsiNamedElement) {
                 logger.info("findSymbolToRename parent: " + parent);
