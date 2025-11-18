@@ -46,7 +46,7 @@ public class CaseEditorActionHandler extends EditorActionHandler {
 
     @Override
     protected void doExecute(@NotNull Editor editor, @Nullable Caret primaryCaret, DataContext dataContext) {
-        logger.info("editor: " + editor + " PrimaryCaret: " + primaryCaret + " dataContext: " + dataContext);
+        logger.info("editor: " + editor + " primaryCaret: " + primaryCaret + " dataContext: " + dataContext);
         Project project = editor.getProject();
         if (project == null) {
             logger.warn("project is null");

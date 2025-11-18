@@ -92,11 +92,10 @@ public class CaseUtils {
      * <p>
      * 如果放到当前类型的前面就不会有这个问题，插件会跳过相同的文本
      *
-     * @param up                    判断查找顺序
      * @param originalCaseModelEnum 原始命名风格
      * @return 根据当前风格和顺序插入 {@link CaseModelEnum#RESET}
      */
-    public static @NotNull List<CaseModelEnum> getAllCaseModel(boolean up, @Nullable CaseModelEnum originalCaseModelEnum) {
+    public static @NotNull List<CaseModelEnum> getAllCaseModel(@Nullable CaseModelEnum originalCaseModelEnum) {
         if (originalCaseModelEnum == null || originalCaseModelEnum == CaseModelEnum.RESET) {
             return getAllCaseModel();
         }
@@ -115,15 +114,7 @@ public class CaseUtils {
             }
         }
         if (index != -1) {
-            if (up) {
-                if (index == list.size() - 1) {
-                    list.add(CaseModelEnum.RESET);
-                } else {
-                    list.add(index + 1, CaseModelEnum.RESET);
-                }
-            } else {
-                list.add(index, CaseModelEnum.RESET);
-            }
+            list.add(index, CaseModelEnum.RESET);
         } else {
             list.add(0, CaseModelEnum.RESET);
         }
@@ -149,7 +140,6 @@ public class CaseUtils {
             groupSet.add(group);
         }
         boolean find = false;
-        int foundIndex = -1;
         NextVo nextVo = new NextVo(up, allCaseModel.size());
         for (; nextVo.condition(); nextVo.after()) {
             CaseModelEnum nextModel = allCaseModel.get(nextVo.getIndex());
@@ -161,18 +151,6 @@ public class CaseUtils {
                 }
             } else if (nextModel.equals(caseModel)) {
                 find = true;
-                foundIndex = nextVo.getIndex();
-            }
-        }
-        // 如果找到目标元素但后面没有符合条件的，从列表开头重新查找
-        NextVo secondNextVo = new NextVo(up, foundIndex + 1);
-        if (find) {
-            for (; secondNextVo.condition(); secondNextVo.after()) {
-                CaseModelEnum nextModel = allCaseModel.get(secondNextVo.getIndex());
-                if (nextModel != caseModel &&
-                        Arrays.stream(nextModel.getGroups()).anyMatch(groupSet::contains)) {
-                    return nextModel;
-                }
             }
         }
         return CaseModelEnum.RESET;

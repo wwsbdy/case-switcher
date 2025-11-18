@@ -56,7 +56,7 @@ public class SingletonRenameHandler {
             toggleStateList.clear();
             CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
             toggleStateList.add(new ToggleState(selectedText, selectedText, caseModelEnum));
-            cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(up, caseModelEnum));
+            cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(caseModelEnum));
         }
         ToggleState toggleState = null;
         if (CollectionUtils.isNotEmpty(toggleStateList)) {
@@ -68,7 +68,8 @@ public class SingletonRenameHandler {
                 toggleState.setSelectedText(selectedText);
                 CaseModelEnum caseModel = CaseUtils.judgment(selectedText);
                 toggleState.setCaseModelEnum(caseModel);
-                cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(up, caseModel));
+                toggleState.setRelated(false);
+                cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(caseModel));
             }
             logger.info("singletonRename toggleState: " + toggleState);
         }

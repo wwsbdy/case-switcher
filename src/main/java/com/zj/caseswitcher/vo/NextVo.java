@@ -15,6 +15,10 @@ public class NextVo {
     private final boolean up;
     private final int size;
     private int index;
+    /**
+     * 循环次数
+     */
+    private int loopCount = 2;
 
     public NextVo(boolean up, int size) {
         this.up = up;
@@ -23,14 +27,22 @@ public class NextVo {
     }
 
     public boolean condition() {
-        return up ? index >= 0 : index < size;
+        return (up ? index >= 0 : index < size) && loopCount > 0;
     }
 
     public void after() {
         if (up) {
             index--;
+            if (index < 0) {
+                index = size - 1;
+                loopCount--;
+            }
         } else {
             index++;
+            if (index >= size) {
+                index = 0;
+                loopCount--;
+            }
         }
     }
 

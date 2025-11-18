@@ -30,7 +30,7 @@ public class MultiRenameHandler {
                               @NotNull CacheVo cacheVo,
                               @NotNull Editor editor,
                               @NotNull Project project) {
-        resetIfChanged(up, caretVoList, cacheVo);
+        resetIfChanged(caretVoList, cacheVo);
         // 找到至少有变化的第一个作为下一个命名风格
         List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
         List<CaseVo> caseVoList =
@@ -81,7 +81,7 @@ public class MultiRenameHandler {
         }
     }
 
-    private static void resetIfChanged(boolean up, @NotNull List<CaretVo> caretVoList, @NotNull CacheVo cacheVo) {
+    private static void resetIfChanged(@NotNull List<CaretVo> caretVoList, @NotNull CacheVo cacheVo) {
         List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
         boolean isChanged = toggleStateList.size() != caretVoList.size();
         if (!isChanged) {
@@ -106,7 +106,7 @@ public class MultiRenameHandler {
             List<String> selectedTexts = caretVoList.stream().map(CaretVo::getSelectTest)
                     .collect(Collectors.toList());
             CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedTexts);
-            List<CaseModelEnum> allCaseModelEnums = CaseUtils.getAllCaseModel(up, caseModelEnum);
+            List<CaseModelEnum> allCaseModelEnums = CaseUtils.getAllCaseModel(caseModelEnum);
             cacheVo.setAllCaseModelEnums(allCaseModelEnums);
             for (String selectedText : selectedTexts) {
                 // 当前类型设置为RESET，因为RESET在allCaseModelEnums中是caseModelEnum的上一位，可能其他文本可以被caseModelEnum转换
