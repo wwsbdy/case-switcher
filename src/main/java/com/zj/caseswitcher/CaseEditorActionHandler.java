@@ -48,6 +48,7 @@ public class CaseEditorActionHandler extends EditorActionHandler {
     protected void doExecute(@NotNull Editor editor, @Nullable Caret primaryCaret, DataContext dataContext) {
         logger.info("editor: " + editor + " primaryCaret: " + primaryCaret + " dataContext: " + dataContext);
         Project project = editor.getProject();
+        String key = editor.toString();
         if (project == null) {
             logger.warn("project is null");
             return;
@@ -60,19 +61,28 @@ public class CaseEditorActionHandler extends EditorActionHandler {
         List<Caret> carets = editor.getCaretModel().getAllCarets();
         if (CollectionUtils.isEmpty(carets)) {
             logger.warn("carets is empty");
-            clearCache(editor);
+            clearCache(key);
             return;
         }
         List<CaretVo> caretVoList = carets.stream().map(caret -> new CaretVo(caret, selectedText(editor, caret)))
                 .filter(caretVo -> StringUtils.isNotEmpty(caretVo.getSelectTest()))
                 .collect(Collectors.toList());
-        CacheVo cache = getCache(editor);
+        CacheVo cache = getCache(key);
         if (caretVoList.size() == 1) {
             SingletonRenameHandler.rename(up, caretVoList.get(0), cache, editor, project, dataContext);
         } else {
             MultiRenameHandler.rename(up, caretVoList, cache, editor, project);
         }
+        // editor文件名可能改变，导致key不一样了，重置
+        if (!key.equals(editor.toString())) {
+            clearCache(key);
+            setCache(editor.toString(), cache);
+        }
 //        registerCaretListener(editor);
+    }
+
+    private void setCache(String key, CacheVo cache) {
+        CACHE_MAP.put(key, cache);
     }
 
     /**
@@ -83,19 +93,19 @@ public class CaseEditorActionHandler extends EditorActionHandler {
             @Override
             public void caretPositionChanged(@NotNull CaretEvent event) {
                 logger.info("caretPositionChanged");
-                clearCache(editor);
+                clearCache(editor.toString());
                 editor.getCaretModel().removeCaretListener(this);
             }
         };
         editor.getCaretModel().addCaretListener(listener);
     }
 
-    public static void clearCache(@NotNull Editor editor) {
-        CACHE_MAP.remove(editor.toString());
+    public static void clearCache(@NotNull String editor) {
+        CACHE_MAP.remove(editor);
     }
 
-    public static @NotNull CacheVo getCache(@NotNull Editor editor) {
-        return CACHE_MAP.computeIfAbsent(editor.toString(), key -> new CacheVo(new ArrayList<>(), new ArrayList<>()));
+    public static @NotNull CacheVo getCache(@NotNull String editor) {
+        return CACHE_MAP.computeIfAbsent(editor, key -> new CacheVo(new ArrayList<>(), new ArrayList<>()));
     }
 
     private @NotNull String selectedText(Editor editor, Caret caret) {
