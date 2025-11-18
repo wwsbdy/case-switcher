@@ -1,9 +1,11 @@
 package com.zj.caseswitcher.utils;
 
+import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.ReadOnlyModificationException;
 import com.intellij.openapi.project.Project;
 import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.utils.log.Logger;
@@ -31,10 +33,11 @@ public class MultiRenameHandler {
                               @NotNull Editor editor,
                               @NotNull Project project) {
         resetIfChanged(caretVoList, cacheVo);
+        List<CaseModelEnum> allCaseModels = CaseUtils.getAllCaseModel(cacheVo.getOriginalCaseModelEnum());
         // 找到至少有变化的第一个作为下一个命名风格
         List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
         List<CaseVo> caseVoList =
-                CaseUtils.tryConvert(up, toggleStateList, toggleStateList.get(0).getCaseModelEnum(), cacheVo.getAllCaseModelEnums());
+                CaseUtils.tryConvert(up, toggleStateList, toggleStateList.get(0).getCaseModelEnum(), allCaseModels);
         if (CollectionUtils.isNotEmpty(caseVoList) && caseVoList.size() == caretVoList.size()) {
             logger.info("multiRename new logic before:" + toggleStateList.get(0).getCaseModelEnum());
             for (int i = 0; i < caseVoList.size(); i++) {
@@ -45,9 +48,15 @@ public class MultiRenameHandler {
                 toggleState.setSelectedText(caseVo.getAfterText());
                 toggleState.setCaseModelEnum(caseVo.getAfterCaseModelEnum());
                 Document document = editor.getDocument();
-                WriteCommandAction.runWriteCommandAction(project, () ->
-                        document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), caseVo.getAfterText())
-                );
+                try {
+                    WriteCommandAction.runWriteCommandAction(project, () ->
+                            document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), caseVo.getAfterText())
+                    );
+                } catch (ReadOnlyModificationException e) {
+                    HintManager.getInstance().showErrorHint(editor, "File is read-only");
+                    logger.error(e);
+                    return;
+                }
             }
             logger.info("multiRename new logic after:" + toggleStateList.get(0).getCaseModelEnum());
             return;
@@ -69,15 +78,21 @@ public class MultiRenameHandler {
                 toggleState = new ToggleState(selectedText, selectedText, caseModelEnum);
             }
             // 判断下一个命名风格
-            CaseModelEnum nextCaseModel = CaseUtils.getNextCaseModel(up, toggleState.getCaseModelEnum(), cacheVo.getAllCaseModelEnums());
+            CaseModelEnum nextCaseModel = CaseUtils.getNextCaseModel(up, toggleState.getCaseModelEnum(), allCaseModels);
             toggleState.setCaseModelEnum(nextCaseModel);
             String next = nextCaseModel.getConvert().convert(toggleState.getOriginalText());
             toggleState.setSelectedText(next);
             logger.info("multiRename toggleState next: " + toggleState);
             Document document = editor.getDocument();
-            WriteCommandAction.runWriteCommandAction(project, () ->
-                    document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), next)
-            );
+            try {
+                WriteCommandAction.runWriteCommandAction(project, () ->
+                        document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), next)
+                );
+            } catch (ReadOnlyModificationException e) {
+                HintManager.getInstance().showErrorHint(editor, "File is read-only");
+                logger.error(e);
+                return;
+            }
         }
     }
 
@@ -106,8 +121,7 @@ public class MultiRenameHandler {
             List<String> selectedTexts = caretVoList.stream().map(CaretVo::getSelectTest)
                     .collect(Collectors.toList());
             CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedTexts);
-            List<CaseModelEnum> allCaseModelEnums = CaseUtils.getAllCaseModel(caseModelEnum);
-            cacheVo.setAllCaseModelEnums(allCaseModelEnums);
+            cacheVo.setOriginalCaseModelEnum(caseModelEnum);
             for (String selectedText : selectedTexts) {
                 // 当前类型设置为RESET，因为RESET在allCaseModelEnums中是caseModelEnum的上一位，可能其他文本可以被caseModelEnum转换
                 // 直接设置成caseModelEnum会跳过这个caseModelEnum只能等下次循环后才能到caseModelEnum
