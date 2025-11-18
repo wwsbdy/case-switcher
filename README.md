@@ -19,7 +19,7 @@
 
 ## 配置环境：
 
-- jdk： 17
+- jdk： 11
 - gradle：8.1
 - org.jetbrains.intellij：1.14.1
 - idea： 2024.3
