@@ -8,6 +8,7 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.ReadOnlyModificationException;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.FileIndexFacade;
@@ -56,7 +57,7 @@ public class SingletonRenameHandler {
             toggleStateList.clear();
             CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
             toggleStateList.add(new ToggleState(selectedText, selectedText, caseModelEnum));
-            cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(caseModelEnum));
+            cacheVo.setOriginalCaseModelEnum(caseModelEnum);
         }
         ToggleState toggleState = null;
         if (CollectionUtils.isNotEmpty(toggleStateList)) {
@@ -69,7 +70,7 @@ public class SingletonRenameHandler {
                 CaseModelEnum caseModel = CaseUtils.judgment(selectedText);
                 toggleState.setCaseModelEnum(caseModel);
                 toggleState.setRelated(false);
-                cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(caseModel));
+                cacheVo.setOriginalCaseModelEnum(caseModel);
             }
             logger.info("singletonRename toggleState: " + toggleState);
         }
@@ -77,17 +78,16 @@ public class SingletonRenameHandler {
             CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
             toggleState = new ToggleState(selectedText, selectedText, caseModelEnum);
         }
+        List<CaseModelEnum> allCaseModels = CaseUtils.getAllCaseModel(cacheVo.getOriginalCaseModelEnum());
         // 尝试使用 RenameProcessor 改名，其他使用这个变量的地方同步改名
         if (CaseModelSettings.getInstance().isRenameRelated()
-                && tryRenameRelated(up, toggleState, project, dataContext, editor, caretVo, cacheVo.getAllCaseModelEnums())) {
+                && tryRenameRelated(up, toggleState, project, dataContext, editor,
+                caretVo, allCaseModels)) {
             return;
         }
         // 只改当前变量名
-        singletonRename(up, editor, project, toggleState, caret, cacheVo.getAllCaseModelEnums());
+        singletonRename(up, editor, project, toggleState, caret, allCaseModels);
         logger.info("singletonRename toggleState next: " + toggleState);
-        if (toggleState.isRelated()) {
-            HintManager.getInstance().showErrorHint(editor, "Same identifier not modified");
-        }
     }
 
     private static void singletonRename(boolean up,
@@ -99,12 +99,21 @@ public class SingletonRenameHandler {
         CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModelEnums);
         String next = caseVo.getAfterText();
         Document document = editor.getDocument();
-        WriteCommandAction.runWriteCommandAction(project, () ->
-                document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), next)
-        );
+        try {
+            WriteCommandAction.runWriteCommandAction(project, () ->
+                    document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), next)
+            );
+        } catch (ReadOnlyModificationException e) {
+            HintManager.getInstance().showErrorHint(editor, "File is read-only");
+            logger.error(e);
+        }
         // 更新选择的文本
         toggleState.setCaseModelEnum(caseVo.getAfterCaseModelEnum());
         toggleState.setSelectedText(next);
+
+        if (toggleState.isRelated()) {
+            HintManager.getInstance().showErrorHint(editor, "Same identifier not modified");
+        }
     }
 
     /**

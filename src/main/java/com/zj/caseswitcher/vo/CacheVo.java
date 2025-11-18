@@ -14,15 +14,16 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class CacheVo {
-    /**
-     * 所有样式
-     */
-    @NotNull
-    private List<CaseModelEnum> allCaseModelEnums;
 
     /**
      * 选择的文本信息
      */
     @NotNull
     private List<ToggleState> toggleStateList;
+
+    /**
+     * 原始样式
+     */
+    @NotNull
+    private CaseModelEnum originalCaseModelEnum;
 }

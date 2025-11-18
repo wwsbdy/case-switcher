@@ -7,7 +7,10 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler;
 import com.intellij.openapi.editor.event.CaretEvent;
 import com.intellij.openapi.editor.event.CaretListener;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.utils.CaseUtils;
 import com.zj.caseswitcher.utils.MultiRenameHandler;
 import com.zj.caseswitcher.utils.SingletonRenameHandler;
@@ -48,6 +51,12 @@ public class CaseEditorActionHandler extends EditorActionHandler {
     protected void doExecute(@NotNull Editor editor, @Nullable Caret primaryCaret, DataContext dataContext) {
         logger.info("editor: " + editor + " primaryCaret: " + primaryCaret + " dataContext: " + dataContext);
         Project project = editor.getProject();
+        VirtualFile vFile = FileDocumentManager.getInstance().getFile(editor.getDocument());
+        if (Objects.nonNull(vFile) && !vFile.isWritable()) {
+            HintManager.getInstance().showInformationHint(editor, "File is read-only");
+            logger.info("doExecute cannot modify read-only file");
+            return;
+        }
         String key = editor.toString();
         if (project == null) {
             logger.warn("project is null");
@@ -67,6 +76,11 @@ public class CaseEditorActionHandler extends EditorActionHandler {
         List<CaretVo> caretVoList = carets.stream().map(caret -> new CaretVo(caret, selectedText(editor, caret)))
                 .filter(caretVo -> StringUtils.isNotEmpty(caretVo.getSelectTest()))
                 .collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(caretVoList)) {
+            logger.warn("caretVoList is empty");
+            clearCache(key);
+            return;
+        }
         CacheVo cache = getCache(key);
         if (caretVoList.size() == 1) {
             SingletonRenameHandler.rename(up, caretVoList.get(0), cache, editor, project, dataContext);
@@ -105,7 +119,7 @@ public class CaseEditorActionHandler extends EditorActionHandler {
     }
 
     public static @NotNull CacheVo getCache(@NotNull String editor) {
-        return CACHE_MAP.computeIfAbsent(editor, key -> new CacheVo(new ArrayList<>(), new ArrayList<>()));
+        return CACHE_MAP.computeIfAbsent(editor, key -> new CacheVo(new ArrayList<>(), CaseModelEnum.RESET));
     }
 
     private @NotNull String selectedText(Editor editor, Caret caret) {
