@@ -68,6 +68,7 @@ public class SingletonRenameHandler {
                 toggleState.setSelectedText(selectedText);
                 CaseModelEnum caseModel = CaseUtils.judgment(selectedText);
                 toggleState.setCaseModelEnum(caseModel);
+                toggleState.setRelated(false);
                 cacheVo.setAllCaseModelEnums(CaseUtils.getAllCaseModel(up, caseModel));
             }
             logger.info("singletonRename toggleState: " + toggleState);
