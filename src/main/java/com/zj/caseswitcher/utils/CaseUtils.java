@@ -149,7 +149,6 @@ public class CaseUtils {
             groupSet.add(group);
         }
         boolean find = false;
-        int foundIndex = -1;
         NextVo nextVo = new NextVo(up, allCaseModel.size());
         for (; nextVo.condition(); nextVo.after()) {
             CaseModelEnum nextModel = allCaseModel.get(nextVo.getIndex());
@@ -161,18 +160,6 @@ public class CaseUtils {
                 }
             } else if (nextModel.equals(caseModel)) {
                 find = true;
-                foundIndex = nextVo.getIndex();
-            }
-        }
-        // 如果找到目标元素但后面没有符合条件的，从列表开头重新查找
-        NextVo secondNextVo = new NextVo(up, foundIndex + 1);
-        if (find) {
-            for (; secondNextVo.condition(); secondNextVo.after()) {
-                CaseModelEnum nextModel = allCaseModel.get(secondNextVo.getIndex());
-                if (nextModel != caseModel &&
-                        Arrays.stream(nextModel.getGroups()).anyMatch(groupSet::contains)) {
-                    return nextModel;
-                }
             }
         }
         return CaseModelEnum.RESET;
