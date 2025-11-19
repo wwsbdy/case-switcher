@@ -8,6 +8,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * 抽象分隔符命名风格
+ *
  * @author : jie.zhou
  * @date : 2025/11/13
  */

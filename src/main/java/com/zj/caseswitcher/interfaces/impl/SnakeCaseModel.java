@@ -1,6 +1,8 @@
 package com.zj.caseswitcher.interfaces.impl;
 
 /**
+ * camel_case
+ *
  * @author : jie.zhou
  * @date : 2025/11/7
  */
