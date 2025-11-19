@@ -4,6 +4,8 @@ import com.zj.caseswitcher.interfaces.ICaseModel;
 import org.jetbrains.annotations.NotNull;
 
 /**
+ * CAMEL_CASE
+ *
  * @author : jie.zhou
  * @date : 2025/11/7
  */
