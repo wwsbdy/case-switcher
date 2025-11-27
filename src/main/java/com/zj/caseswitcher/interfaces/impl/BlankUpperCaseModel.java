@@ -20,26 +20,10 @@ public class BlankUpperCaseModel implements ICaseModel {
 
     @Override
     public @NotNull String convert(@NotNull String text) {
-        StringBuilder sb = new StringBuilder();
-        boolean previousSnake = false;
-        boolean allUpper = text.equals(text.toUpperCase());
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (i > 0 && Character.isUpperCase(c) && !previousSnake && !allUpper) {
-                sb.append(" ");
-                sb.append(Character.toUpperCase(c));
-            } else if (AbsSeparatorCaseModel.SEPARATOR_SET.contains(c)) {
-                sb.append(" ");
-                previousSnake = true;
-            } else {
-                if (i == 0 || previousSnake) {
-                    sb.append(Character.toUpperCase(c));
-                } else {
-                    sb.append(Character.toLowerCase(c));
-                }
-                previousSnake = false;
-            }
+        String convert = BlankCaseModel.INSTANCE.convert(text);
+        if (convert.length() > 1) {
+            return convert.substring(0, 1).toUpperCase() + convert.substring(1);
         }
-        return sb.toString();
+        return convert;
     }
 }
