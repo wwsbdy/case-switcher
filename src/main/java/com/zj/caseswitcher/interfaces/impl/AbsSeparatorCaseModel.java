@@ -2,6 +2,7 @@ package com.zj.caseswitcher.interfaces.impl;
 
 import com.zj.caseswitcher.interfaces.ICaseModel;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
@@ -39,6 +40,9 @@ public abstract class AbsSeparatorCaseModel implements ICaseModel {
 
     @Override
     public @NotNull String convert(@NotNull String text) {
+        if (StringUtils.isBlank(text)) {
+            return text;
+        }
         StringBuilder sb = new StringBuilder();
         boolean previousSeparator = false;
         boolean allUpper = text.equals(text.toUpperCase());
