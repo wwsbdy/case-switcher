@@ -1,4 +1,3 @@
-// CaseModelSettings.java
 package com.zj.caseswitcher.setting;
 
 import com.intellij.openapi.application.ApplicationManager;
