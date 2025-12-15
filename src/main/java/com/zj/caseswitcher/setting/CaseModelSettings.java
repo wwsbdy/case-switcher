@@ -11,6 +11,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -69,11 +70,14 @@ public class CaseModelSettings implements PersistentStateComponent<CaseModelSett
     }
 
     public synchronized void setCaseModelEnumVoList(List<CaseModelEnumVo> caseModelEnumVoList) {
+        if (Objects.isNull(caseModelEnumVoList)) {
+            caseModelEnumVoList = Collections.emptyList();
+        }
         this.state.setCaseModelEnumVoList(caseModelEnumVoList);
     }
 
     public synchronized List<CaseModelEnumVo> getOrderOrDefault() {
-        if (CollectionUtils.isEmpty(state.getCaseModelEnumVoList())) {
+        if (Objects.isNull(state.getCaseModelEnumVoList())) {
             List<CaseModelEnumVo> defaults = new ArrayList<>(CaseModelSettings.DEFAULTS);
             state.setCaseModelEnumVoList(defaults);
             return defaults;
@@ -85,7 +89,7 @@ public class CaseModelSettings implements PersistentStateComponent<CaseModelSett
         state.setRenameRelated(renameRelated);
     }
 
-    public synchronized boolean isRenameRelated() {
+    public boolean isRenameRelated() {
         return Objects.isNull(state.getRenameRelated()) || state.getRenameRelated();
     }
 }
