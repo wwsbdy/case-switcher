@@ -29,7 +29,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
@@ -41,7 +40,6 @@ import java.util.Objects;
 public class SingletonRenameHandler {
 
     private static final Logger logger = Logger.getInstance(SingletonRenameHandler.class);
-    private static final org.slf4j.Logger log = LoggerFactory.getLogger(SingletonRenameHandler.class);
 
     public static void rename(boolean up,
                               @NotNull CaretVo caretVo,
