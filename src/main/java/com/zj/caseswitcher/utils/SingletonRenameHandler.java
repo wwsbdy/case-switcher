@@ -16,6 +16,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.search.ProjectScopeImpl;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.refactoring.rename.RenameHandlerRegistry;
 import com.intellij.refactoring.rename.RenameProcessor;
 import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.setting.CaseModelSettings;
@@ -28,6 +29,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
@@ -39,6 +41,7 @@ import java.util.Objects;
 public class SingletonRenameHandler {
 
     private static final Logger logger = Logger.getInstance(SingletonRenameHandler.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(SingletonRenameHandler.class);
 
     public static void rename(boolean up,
                               @NotNull CaretVo caretVo,
@@ -87,7 +90,7 @@ public class SingletonRenameHandler {
         }
         // 只改当前变量名
         singletonRename(up, editor, project, toggleState, caret, allCaseModels);
-        logger.info("singletonRename toggleState next: " + toggleState);
+        logger.info("rename toggleState next: " + toggleState);
     }
 
     private static void singletonRename(boolean up,
@@ -127,6 +130,11 @@ public class SingletonRenameHandler {
                                             @NotNull CaretVo caretVo,
                                             @NotNull List<CaseModelEnum> allCaseModelEnums) {
         if (Objects.isNull(dataContext)) {
+            logger.info("tryRenameRelated dataContext is null");
+            return false;
+        }
+        if (!RenameHandlerRegistry.getInstance().hasAvailableHandler(dataContext)) {
+            logger.info("tryRenameRelated no rename handler available");
             return false;
         }
         try {
@@ -135,6 +143,7 @@ public class SingletonRenameHandler {
             if (Objects.isNull(element)) {
                 return false;
             }
+            logger.info("tryRenameRelated element class: " + element.getClass());
             PsiFile psiFile = element.getContainingFile();
             if (psiFile == null) {
                 return false;
@@ -175,6 +184,7 @@ public class SingletonRenameHandler {
         return false;
     }
 
+    @Nullable
     private static PsiNamedElement getPsiNamedElement(Project project, Editor editor, Caret caret) {
         PsiFile psiFile = PsiDocumentManager.getInstance(project).getPsiFile(editor.getDocument());
         if (psiFile == null) {
