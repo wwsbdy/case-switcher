@@ -1,11 +1,11 @@
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
 /**
  * 从 CHANGELOG.md 文件中解析变更日志
  */
 fun main() {
-    val changelogPath = Paths.get("CHANGELOG.md")
+    val changelogPath = Path.of("CHANGELOG.md")
     try {
         val changeNotes = parseChangeNotesFromReadme(changelogPath)
         println(changeNotes)
@@ -19,7 +19,7 @@ fun main() {
  * 从 CHANGELOG.md 文件中解析变更日志
  * @return 格式化的 HTML 变更日志
  */
-fun parseChangeNotesFromReadme(changelogPath: java.nio.file.Path): String {
+fun parseChangeNotesFromReadme(changelogPath: Path): String {
     val lines = Files.readAllLines(changelogPath)
 
     data class VersionNotes(val version: String, val blocks: List<List<String>>)
