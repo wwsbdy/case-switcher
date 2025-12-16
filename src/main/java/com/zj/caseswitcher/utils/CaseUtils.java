@@ -252,7 +252,6 @@ public class CaseUtils {
                                                       @Nullable Function<String, Boolean> func) {
         Map<String, CaseVo> caseVoMap = new LinkedHashMap<>();
         CaseModelEnum caseModel = toggleState.getCaseModelEnum();
-        // 最多循环两遍，避免死循环
         String selectedText = toggleState.getSelectedText();
         String originalText = toggleState.getOriginalText();
         for (CaseModelEnum caseModelEnum : allCaseModelEnums) {
