@@ -241,6 +241,33 @@ public class CaseUtils {
         return caseVoList;
     }
 
+    /**
+     * 尝试转换
+     * 找到toggleStateList文本中至少有一个变化的命名风格，其他toggleStateList中的文本按照这个命名风格转换
+     *
+     * @param func 自定义判断是否符合条件
+     */
+    public static @NotNull List<CaseVo> getAllConvert(boolean up,
+                                                      @NotNull ToggleState toggleState,
+                                                      @NotNull List<CaseModelEnum> allCaseModelEnums,
+                                                      @Nullable Function<String, Boolean> func) {
+        Map<String, CaseVo> caseVoMap = new LinkedHashMap<>();
+        CaseModelEnum caseModel = toggleState.getCaseModelEnum();
+        // 最多循环两遍，避免死循环
+        String selectedText = toggleState.getSelectedText();
+        String originalText = toggleState.getOriginalText();
+        for (CaseModelEnum caseModelEnum : allCaseModelEnums) {
+            CaseModelEnum nextCaseModel = getNextCaseModel(up, caseModelEnum, allCaseModelEnums);
+            String nextText = nextCaseModel.getConvert().convert(originalText);
+            if (Objects.isNull(func) || func.apply(nextText)) {
+                caseVoMap.computeIfAbsent(nextText, k -> new CaseVo(selectedText, nextText, caseModel, nextCaseModel));
+            }
+        }
+        CaseModelEnum caseModelEnum = toggleState.getCaseModelEnum();
+        caseVoMap.computeIfAbsent(originalText, k -> new CaseVo(selectedText, originalText, caseModelEnum, CaseModelEnum.RESET));
+        return new ArrayList<>(caseVoMap.values());
+    }
+
     public static @NotNull String selectedText(Editor editor, Caret caret) {
         String text = caret.getSelectedText();
         if (text == null || text.isEmpty()) {
