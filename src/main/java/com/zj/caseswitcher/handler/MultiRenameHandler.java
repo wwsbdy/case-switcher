@@ -1,4 +1,4 @@
-package com.zj.caseswitcher.utils;
+package com.zj.caseswitcher.handler;
 
 import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.openapi.command.WriteCommandAction;
@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.ReadOnlyModificationException;
 import com.intellij.openapi.project.Project;
 import com.zj.caseswitcher.enums.CaseModelEnum;
+import com.zj.caseswitcher.utils.CaseUtils;
 import com.zj.caseswitcher.utils.log.Logger;
 import com.zj.caseswitcher.vo.CacheVo;
 import com.zj.caseswitcher.vo.CaretVo;

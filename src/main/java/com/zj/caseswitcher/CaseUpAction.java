@@ -1,6 +1,7 @@
 package com.zj.caseswitcher;
 
 import com.intellij.openapi.editor.actions.TextComponentEditorAction;
+import com.zj.caseswitcher.handler.CaseSwitchActionHandler;
 
 
 /**
@@ -10,7 +11,7 @@ import com.intellij.openapi.editor.actions.TextComponentEditorAction;
 public class CaseUpAction extends TextComponentEditorAction {
 
     public CaseUpAction() {
-        super(new CaseEditorActionHandler(true));
+        super(new CaseSwitchActionHandler(true));
     }
 
 }
