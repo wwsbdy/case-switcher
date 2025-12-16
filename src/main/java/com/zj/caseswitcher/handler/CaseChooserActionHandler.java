@@ -69,12 +69,15 @@ public class CaseChooserActionHandler extends CaseActionHandler {
         // 创建动态子菜单组
         DefaultActionGroup subMenuGroup = new DefaultActionGroup();
         for (CaseVo caseVo : caseVos) {
-            subMenuGroup.add(new AnAction(caseVo.getAfterText()) {
+            AnAction anAction = new AnAction() {
                 @Override
                 public void actionPerformed(@NotNull AnActionEvent e) {
                     SingletonRenameHandler.rename(caretVo, toggleState, editor, project, dataContext, caseVo, element);
                 }
-            });
+            };
+            // 设置子菜单选项文本，mayContainMnemonic=false防止快捷键转义
+            anAction.getTemplatePresentation().setText(caseVo.getAfterText(), false);
+            subMenuGroup.add(anAction);
         }
         // 弹出子菜单（Popup Menu）
         JBPopupFactory.getInstance()
