@@ -56,14 +56,13 @@ public class SingletonRenameHandler {
         }
         ToggleState toggleState = CaseCache.getToggleState(cacheVo, selectedText);
         List<CaseModelEnum> allCaseModels = CaseUtils.getAllCaseModel(cacheVo.getOriginalCaseModelEnum());
-        if (CaseModelSettings.getInstance().isRenameRelated()) {
-            PsiNamedElement element = ElementUtils.getPsiNamedElement(project, editor, caretVo);
-            if (Objects.nonNull(element)) {
-                NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
-                CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels, text -> validator.isIdentifier(text, project));
-                if (tryRenameRelated(element, toggleState, project, dataContext, caseVo)) {
-                    return;
-                }
+        PsiNamedElement element;
+        if (CaseModelSettings.getInstance().isRenameRelated()
+                && Objects.nonNull(element = ElementUtils.getPsiNamedElement(project, editor, caretVo))) {
+            NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
+            CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels, text -> validator.isIdentifier(text, project));
+            if (tryRenameRelated(element, toggleState, project, dataContext, caseVo)) {
+                return;
             }
         }
         CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels);
@@ -87,16 +86,14 @@ public class SingletonRenameHandler {
         if (StringUtils.isEmpty(selectedText)) {
             return;
         }
-        if (CaseModelSettings.getInstance().isRenameRelated()) {
-            if (Objects.nonNull(element)) {
-                NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
-                if (validator.isIdentifier(caseVo.getAfterText(), project)) {
-                    if (tryRenameRelated(element, toggleState, project, dataContext, caseVo)) {
-                        return;
-                    }
-                } else {
-                    HintManager.getInstance().showErrorHint(editor, "Invalid identifier: " + caseVo.getAfterText());
-                }
+        if (Objects.nonNull(element) && CaseModelSettings.getInstance().isRenameRelated()) {
+            // 检查新名称是否有效
+            NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
+            if (!validator.isIdentifier(caseVo.getAfterText(), project)) {
+                HintManager.getInstance().showErrorHint(editor, "Invalid identifier: " + caseVo.getAfterText());
+            } else if (tryRenameRelated(element, toggleState, project, dataContext, caseVo)) {
+                // 重命名成功
+                return;
             }
         }
         // 只改当前变量名
@@ -134,11 +131,11 @@ public class SingletonRenameHandler {
     /**
      * 尝试使用 RenameProcessor 更新引用
      */
-    public static boolean tryRenameRelated(@Nullable PsiNamedElement element,
-                                           @NotNull ToggleState toggleState,
-                                           @NotNull Project project,
-                                           @Nullable DataContext dataContext,
-                                           @NotNull CaseVo caseVo) {
+    private static boolean tryRenameRelated(@Nullable PsiNamedElement element,
+                                            @NotNull ToggleState toggleState,
+                                            @NotNull Project project,
+                                            @Nullable DataContext dataContext,
+                                            @NotNull CaseVo caseVo) {
         if (Objects.isNull(dataContext)) {
             logger.info("tryRenameRelated dataContext is null");
             return false;
