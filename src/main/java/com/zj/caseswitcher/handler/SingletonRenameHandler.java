@@ -1,4 +1,4 @@
-package com.zj.caseswitcher.utils;
+package com.zj.caseswitcher.handler;
 
 import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.lang.LanguageNamesValidation;
@@ -20,6 +20,7 @@ import com.intellij.refactoring.rename.RenameHandlerRegistry;
 import com.intellij.refactoring.rename.RenameProcessor;
 import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.setting.CaseModelSettings;
+import com.zj.caseswitcher.utils.CaseUtils;
 import com.zj.caseswitcher.utils.log.Logger;
 import com.zj.caseswitcher.vo.CacheVo;
 import com.zj.caseswitcher.vo.CaretVo;

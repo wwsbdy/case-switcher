@@ -33,6 +33,8 @@
                                  displayName="Case Switcher"/>
         <applicationService id="com.zj.CaseModelSettings"
                             serviceImplementation="com.zj.caseswitcher.setting.CaseModelSettings"/>
+        <projectService id="com.zj.MyProjectService"
+                        serviceImplementation="com.zj.caseswitcher.utils.CaseCache"/>
     </extensions>
     <actions>
         <action id="com.zj.CaseUpAction" class="com.zj.caseswitcher.CaseUpAction"
@@ -44,6 +46,11 @@
                 text="Case Next Switcher">
             <add-to-group group-id="EditSmartGroup" anchor="after" relative-to-action="EditorToggleCase"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift alt PERIOD"/>
+        </action>
+        <action id="com.zj.caseswitcher.CaseChoseAction" class="com.zj.caseswitcher.CaseChoseAction"
+                text="Case Chose Switcher">
+            <add-to-group group-id="EditSmartGroup" anchor="after" relative-to-action="EditorToggleCase"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift alt SLASH"/>
         </action>
     </actions>
 </idea-plugin>

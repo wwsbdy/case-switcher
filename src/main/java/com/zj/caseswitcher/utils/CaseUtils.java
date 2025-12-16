@@ -1,7 +1,13 @@
 package com.zj.caseswitcher.utils;
 
+import com.intellij.openapi.editor.Caret;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.event.CaretEvent;
+import com.intellij.openapi.editor.event.CaretListener;
+import com.intellij.openapi.project.Project;
 import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.setting.CaseModelSettings;
+import com.zj.caseswitcher.utils.log.Logger;
 import com.zj.caseswitcher.vo.CaseModelEnumVo;
 import com.zj.caseswitcher.vo.CaseVo;
 import com.zj.caseswitcher.vo.NextVo;
@@ -13,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -20,6 +27,10 @@ import java.util.stream.Collectors;
  * @date : 2025/11/7
  */
 public class CaseUtils {
+
+    private static final Logger logger = Logger.getInstance(CaseUtils.class);
+
+    private static final Pattern SELECT_PATTERN = Pattern.compile("[^A-Za-z0-9_]");
 
     /**
      * 判断当前命名风格
@@ -228,5 +239,61 @@ public class CaseUtils {
                     nextCaseModel));
         }
         return caseVoList;
+    }
+
+    public static @NotNull String selectedText(Editor editor, Caret caret) {
+        String text = caret.getSelectedText();
+        if (text == null || text.isEmpty()) {
+            int start = caret.getOffset();
+            if (start <= 0) {
+                return "";
+            }
+            int end = start;
+            boolean moveLeft = true;
+            boolean moveRight = true;
+            while (moveLeft && start > 0) {
+                start--;
+                caret.setSelection(start, end);
+                String selected = caret.getSelectedText();
+                if (selected == null || SELECT_PATTERN.matcher(selected).find()) {
+                    start++;
+                    moveLeft = false;
+                }
+            }
+            while (moveRight && end < editor.getDocument().getTextLength()) {
+                end++;
+                caret.setSelection(start, end);
+                String selected = caret.getSelectedText();
+                if (selected == null || SELECT_PATTERN.matcher(selected).find()) {
+                    end--;
+                    moveRight = false;
+                }
+            }
+
+            caret.setSelection(start, end);
+            text = caret.getSelectedText();
+        }
+
+        return Objects.isNull(text) ? "" : text;
+    }
+
+    /**
+     * 光标移动或编辑后清空缓存
+     */
+    public static void registerCaretListener(Editor editor) {
+        Project project = editor.getProject();
+        if (project == null) {
+            logger.warn("project is null");
+            return;
+        }
+        CaretListener listener = new CaretListener() {
+            @Override
+            public void caretPositionChanged(@NotNull CaretEvent event) {
+                logger.info("caretPositionChanged");
+                CaseCache.getInstance(project).clearCache(editor.toString());
+                editor.getCaretModel().removeCaretListener(this);
+            }
+        };
+        editor.getCaretModel().addCaretListener(listener);
     }
 }
