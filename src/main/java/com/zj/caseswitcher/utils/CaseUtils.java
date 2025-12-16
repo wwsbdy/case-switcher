@@ -247,8 +247,7 @@ public class CaseUtils {
      *
      * @param func 自定义判断是否符合条件
      */
-    public static @NotNull List<CaseVo> getAllConvert(boolean up,
-                                                      @NotNull ToggleState toggleState,
+    public static @NotNull List<CaseVo> getAllConvert(@NotNull ToggleState toggleState,
                                                       @NotNull List<CaseModelEnum> allCaseModelEnums,
                                                       @Nullable Function<String, Boolean> func) {
         Map<String, CaseVo> caseVoMap = new LinkedHashMap<>();
@@ -257,10 +256,9 @@ public class CaseUtils {
         String selectedText = toggleState.getSelectedText();
         String originalText = toggleState.getOriginalText();
         for (CaseModelEnum caseModelEnum : allCaseModelEnums) {
-            CaseModelEnum nextCaseModel = getNextCaseModel(up, caseModelEnum, allCaseModelEnums);
-            String nextText = nextCaseModel.getConvert().convert(originalText);
+            String nextText = caseModelEnum.getConvert().convert(originalText);
             if (Objects.isNull(func) || func.apply(nextText)) {
-                caseVoMap.computeIfAbsent(nextText, k -> new CaseVo(selectedText, nextText, caseModel, nextCaseModel));
+                caseVoMap.computeIfAbsent(nextText, k -> new CaseVo(selectedText, nextText, caseModel, caseModelEnum));
             }
         }
         CaseModelEnum caseModelEnum = toggleState.getCaseModelEnum();

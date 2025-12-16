@@ -59,7 +59,7 @@ public class CaseChooserActionHandler extends CaseActionHandler {
         PsiNamedElement element = ElementUtils.getPsiNamedElement(project, editor, caretVo);
         NamesValidator validator = Objects.isNull(element) ? null : LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
         // 生成所有转换结果
-        List<CaseVo> caseVos = CaseUtils.getAllConvert(false, toggleState, caseModelEnumList,
+        List<CaseVo> caseVos = CaseUtils.getAllConvert(toggleState, caseModelEnumList,
                 text -> Objects.isNull(validator) || validator.isIdentifier(text, project));
         if (CollectionUtils.isEmpty(caseVos)) {
             logger.info("CaseChooserActionHandler no case vo");
