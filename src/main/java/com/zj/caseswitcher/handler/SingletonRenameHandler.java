@@ -54,7 +54,7 @@ public class SingletonRenameHandler {
         if (StringUtils.isEmpty(selectedText)) {
             return;
         }
-        ToggleState toggleState = CaseCache.getToggleState(cacheVo, selectedText);
+        ToggleState toggleState = CaseCache.getSingleToggleState(cacheVo, selectedText);
         List<CaseModelEnum> allCaseModels = CaseUtils.getAllCaseModel(cacheVo.getOriginalCaseModelEnum());
         PsiNamedElement element;
         if (CaseModelSettings.getInstance().isRenameRelated()

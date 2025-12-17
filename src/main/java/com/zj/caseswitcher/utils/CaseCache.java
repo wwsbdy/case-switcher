@@ -5,12 +5,15 @@ import com.intellij.openapi.project.Project;
 import com.zj.caseswitcher.enums.CaseModelEnum;
 import com.zj.caseswitcher.utils.log.Logger;
 import com.zj.caseswitcher.vo.CacheVo;
+import com.zj.caseswitcher.vo.CaretVo;
 import com.zj.caseswitcher.vo.ToggleState;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -45,10 +48,19 @@ public final class CaseCache {
         CACHE_MAP.put(key, cache);
     }
 
-    public static @NotNull ToggleState getToggleState(@NotNull CacheVo cacheVo,
-                                                       String selectedText) {
-        // 获取/设置缓存数据
-        List<ToggleState> toggleStateList = getToggleStateList(cacheVo, selectedText);
+    /**
+     * 获取单个选择文本缓存，不存在或更改就重新赋值
+     */
+    public static @NotNull ToggleState getSingleToggleState(@NotNull CacheVo cacheVo,
+                                                            String selectedText) {
+        List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
+        if (toggleStateList.size() != 1) {
+            logger.info("getToggleStateList carets size is not equal to toggle list size");
+            toggleStateList.clear();
+            CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
+            toggleStateList.add(new ToggleState(selectedText, selectedText, caseModelEnum));
+            cacheVo.setOriginalCaseModelEnum(caseModelEnum);
+        }
         ToggleState toggleState = null;
         if (CollectionUtils.isNotEmpty(toggleStateList)) {
             toggleState = toggleStateList.get(0);
@@ -71,16 +83,42 @@ public final class CaseCache {
         return toggleState;
     }
 
-    public static @NotNull List<ToggleState> getToggleStateList(@NotNull CacheVo cacheVo, String selectedText) {
+
+    /**
+     * 获取多个选择文本缓存，不存在或更改就重新赋值
+     */
+    public static @NotNull List<ToggleState> getMultiToggleState(@NotNull List<CaretVo> caretVoList, @NotNull CacheVo cacheVo) {
         List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
-        if (toggleStateList.size() != 1) {
-            logger.info("getToggleStateList carets size is not equal to toggle list size");
+        boolean isChanged = toggleStateList.size() != caretVoList.size();
+        if (!isChanged) {
+            for (int i = 0; i < caretVoList.size(); i++) {
+                CaretVo caretVo = caretVoList.get(i);
+                String selectedText = caretVo.getSelectTest();
+                if (StringUtils.isEmpty(selectedText)) {
+                    continue;
+                }
+                ToggleState toggleState = toggleStateList.get(i);
+                // 当前选择的文本和原始文本不一致，重置
+                if (!toggleState.getSelectedText().equals(selectedText)) {
+                    isChanged = true;
+                    break;
+                }
+            }
+        }
+        if (isChanged) {
+            logger.info("getMultiToggleState caretVoList size is not equal to toggle list size");
             toggleStateList.clear();
-            CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
-            toggleStateList.add(new ToggleState(selectedText, selectedText, caseModelEnum));
+            // 多个选择文本时，每个文本类型可能不一样，导致替换不同步，统一一下
+            List<String> selectedTexts = caretVoList.stream().map(CaretVo::getSelectTest)
+                    .collect(Collectors.toList());
+            CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedTexts);
             cacheVo.setOriginalCaseModelEnum(caseModelEnum);
+            for (String selectedText : selectedTexts) {
+                // 当前类型设置为RESET，因为RESET在allCaseModelEnums中是caseModelEnum的上一位，可能其他文本可以被caseModelEnum转换
+                // 直接设置成caseModelEnum会跳过这个caseModelEnum只能等下次循环后才能到caseModelEnum
+                toggleStateList.add(new ToggleState(selectedText, selectedText, CaseModelEnum.RESET));
+            }
         }
         return toggleStateList;
     }
-
 }

@@ -55,7 +55,7 @@ public class CaseChooserActionHandler extends CaseActionHandler {
             HintManager.getInstance().showErrorHint(editor, "No case model");
             return;
         }
-        ToggleState toggleState = CaseCache.getToggleState(cache, selectedText);
+        ToggleState toggleState = CaseCache.getSingleToggleState(cache, selectedText);
         PsiNamedElement element = ElementUtils.getPsiNamedElement(project, editor, caretVo);
         NamesValidator validator = Objects.isNull(element) ? null : LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
         // 生成所有转换结果
