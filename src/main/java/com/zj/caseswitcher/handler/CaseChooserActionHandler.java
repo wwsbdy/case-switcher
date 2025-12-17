@@ -122,7 +122,7 @@ public class CaseChooserActionHandler extends CaseActionHandler {
         // 只改当前变量名
         SingletonRenameHandler.singletonRename(caseVo, editor, project, toggleState, caret);
         if (Objects.nonNull(element) && ElementUtils.readOnly(editor, element)) {
-            HintManager.getInstance().showInformationHint(editor, "File is read-only");
+            HintManager.getInstance().showInformationHint(editor, "Element is read-only");
             logger.info("tryRenameRelated cannot modify read-only file");
         }
         logger.info("CaseChooserActionHandler rename toggleState next: " + toggleState);
