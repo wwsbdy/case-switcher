@@ -114,8 +114,6 @@ public final class CaseCache {
             CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedTexts);
             cacheVo.setOriginalCaseModelEnum(caseModelEnum);
             for (String selectedText : selectedTexts) {
-                // 当前类型设置为RESET，因为RESET在allCaseModelEnums中是caseModelEnum的上一位，可能其他文本可以被caseModelEnum转换
-                // 直接设置成caseModelEnum会跳过这个caseModelEnum只能等下次循环后才能到caseModelEnum
                 toggleStateList.add(new ToggleState(selectedText, selectedText, CaseModelEnum.RESET));
             }
         }

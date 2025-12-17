@@ -1,6 +1,5 @@
 package com.zj.caseswitcher.interfaces.impl;
 
-import com.zj.caseswitcher.interfaces.ICaseModel;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -9,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
  * @author : jie.zhou
  * @date : 2025/11/7
  */
-public class CamelCaseModel implements ICaseModel {
+public class CamelCaseModel extends AbsCaseModel {
 
     public static final CamelCaseModel INSTANCE = new CamelCaseModel();
 
@@ -24,25 +23,21 @@ public class CamelCaseModel implements ICaseModel {
     }
 
     @Override
-    public @NotNull String convert(@NotNull String text) {
-        StringBuilder sb = new StringBuilder();
-        boolean nextUpper = false;
-        boolean allUpper = text.equals(text.toUpperCase());
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c == '_' || c == '-' || c == ' ') {
-                nextUpper = true;
-            } else if (nextUpper) {
-                sb.append(Character.toUpperCase(c));
-                nextUpper = false;
-            } else {
-                if (allUpper || i == 0) {
-                    sb.append(Character.toLowerCase(c));
-                } else {
-                    sb.append(c);
-                }
-            }
-        }
-        return sb.toString();
+    protected void appendFirstChar(StringBuilder sb, char c) {
+        sb.append(Character.toLowerCase(c));
+    }
+
+    @Override
+    protected void appendFirstCharOfWord(StringBuilder sb, char c) {
+        sb.append(Character.toUpperCase(c));
+    }
+
+    @Override
+    protected void appendOtherCharOfWord(StringBuilder sb, char c) {
+        sb.append(Character.toLowerCase(c));
+    }
+
+    @Override
+    protected void appendSeparator(StringBuilder sb) {
     }
 }

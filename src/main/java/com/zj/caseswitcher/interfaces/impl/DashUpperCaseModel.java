@@ -1,6 +1,5 @@
 package com.zj.caseswitcher.interfaces.impl;
 
-import com.zj.caseswitcher.interfaces.ICaseModel;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -9,8 +8,12 @@ import org.jetbrains.annotations.NotNull;
  * @author : jie.zhou
  * @date : 2025/11/7
  */
-public class DashUpperCaseModel implements ICaseModel {
+public class DashUpperCaseModel extends AbsSeparatorCaseModel {
     public static final DashUpperCaseModel INSTANCE = new DashUpperCaseModel();
+
+    public DashUpperCaseModel() {
+        super('-', true);
+    }
 
     @Override
     public boolean isThisType(@NotNull String text) {

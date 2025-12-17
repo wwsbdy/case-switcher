@@ -59,10 +59,6 @@ tasks.clean {
     delete(project.rootProject.file("dist"))
 }
 
-tasks.withType<Test>().configureEach {
-    enabled = false
-}
-
 tasks.publishPlugin {
     token.set(properties("publish.token"))
 }
