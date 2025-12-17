@@ -165,6 +165,17 @@ public class CaseConversionReadableTest {
     }
 
     @Test
+    public void testNumbersAtEndConversion() {
+        // 测试输入: 数字结尾
+        String input = "UserId123";
+
+        assertConversion(input, CaseModelEnum.CAMEL, "userId123");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "UserId123");
+        assertConversion(input, CaseModelEnum.SNAKE, "user_id_123");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "USER_ID_123");
+    }
+
+    @Test
     public void testNumbersAtBeginningConversion() {
         // 测试输入: 数字开头
         String input = "123user";

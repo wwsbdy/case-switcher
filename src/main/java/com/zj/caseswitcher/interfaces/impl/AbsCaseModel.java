@@ -56,6 +56,9 @@ public abstract class AbsCaseModel implements ICaseModel {
                 charList.remove(charList.size() - 1);
                 appendWordAndClear(sb, charList, isFirstChar);
                 charList.add(previousChar);
+            } else if (Character.isLetter(previousChar) != Character.isLetter(c) && c == Character.toUpperCase(c)) {
+                // 前一个和当前类型异或，当前作为单词首字母添加到结果中
+                appendWordAndClear(sb, charList, isFirstChar);
             }
             charList.add(c);
         }
