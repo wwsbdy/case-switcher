@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.ReadOnlyModificationException;
 import com.intellij.openapi.project.Project;
 import com.zj.caseswitcher.enums.CaseModelEnum;
+import com.zj.caseswitcher.utils.CaseCache;
 import com.zj.caseswitcher.utils.CaseUtils;
 import com.zj.caseswitcher.utils.log.Logger;
 import com.zj.caseswitcher.vo.CacheVo;
@@ -19,7 +20,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author : jie.zhou
@@ -33,13 +33,24 @@ public class MultiRenameHandler {
                               @NotNull CacheVo cacheVo,
                               @NotNull Editor editor,
                               @NotNull Project project) {
-        resetIfChanged(caretVoList, cacheVo);
+        if (CollectionUtils.isEmpty(caretVoList)) {
+            logger.info("multiRename no caret");
+            return;
+        }
+        List<ToggleState> toggleStateList = CaseCache.getMultiToggleState(caretVoList, cacheVo);
+        if (CollectionUtils.isEmpty(toggleStateList)) {
+            logger.info("multiRename no toggleState");
+            return;
+        }
         List<CaseModelEnum> allCaseModels = CaseUtils.getAllCaseModel(cacheVo.getOriginalCaseModelEnum());
         // 找到至少有变化的第一个作为下一个命名风格
-        List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
         List<CaseVo> caseVoList =
                 CaseUtils.tryConvert(up, toggleStateList, toggleStateList.get(0).getCaseModelEnum(), allCaseModels);
-        if (CollectionUtils.isNotEmpty(caseVoList) && caseVoList.size() == caretVoList.size()) {
+        if (CollectionUtils.isEmpty(caseVoList)) {
+            logger.info("multiRename no change");
+            return;
+        }
+        if (caseVoList.size() == caretVoList.size()) {
             logger.info("multiRename new logic before:" + toggleStateList.get(0).getCaseModelEnum());
             for (int i = 0; i < caseVoList.size(); i++) {
                 CaretVo caretVo = caretVoList.get(i);
@@ -93,40 +104,6 @@ public class MultiRenameHandler {
                 HintManager.getInstance().showErrorHint(editor, "File is read-only");
                 logger.error(e);
                 return;
-            }
-        }
-    }
-
-    private static void resetIfChanged(@NotNull List<CaretVo> caretVoList, @NotNull CacheVo cacheVo) {
-        List<ToggleState> toggleStateList = cacheVo.getToggleStateList();
-        boolean isChanged = toggleStateList.size() != caretVoList.size();
-        if (!isChanged) {
-            for (int i = 0; i < caretVoList.size(); i++) {
-                CaretVo caretVo = caretVoList.get(i);
-                String selectedText = caretVo.getSelectTest();
-                if (StringUtils.isEmpty(selectedText)) {
-                    continue;
-                }
-                ToggleState toggleState = toggleStateList.get(i);
-                // 当前选择的文本和原始文本不一致，重置
-                if (!toggleState.getSelectedText().equals(selectedText)) {
-                    isChanged = true;
-                    break;
-                }
-            }
-        }
-        if (isChanged) {
-            logger.info("multiRename caretVoList size is not equal to toggle list size");
-            toggleStateList.clear();
-            // 多个选择文本时，每个文本类型可能不一样，导致替换不同步，统一一下
-            List<String> selectedTexts = caretVoList.stream().map(CaretVo::getSelectTest)
-                    .collect(Collectors.toList());
-            CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedTexts);
-            cacheVo.setOriginalCaseModelEnum(caseModelEnum);
-            for (String selectedText : selectedTexts) {
-                // 当前类型设置为RESET，因为RESET在allCaseModelEnums中是caseModelEnum的上一位，可能其他文本可以被caseModelEnum转换
-                // 直接设置成caseModelEnum会跳过这个caseModelEnum只能等下次循环后才能到caseModelEnum
-                toggleStateList.add(new ToggleState(selectedText, selectedText, CaseModelEnum.RESET));
             }
         }
     }

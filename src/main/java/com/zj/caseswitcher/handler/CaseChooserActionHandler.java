@@ -7,11 +7,13 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.popup.JBPopupFactory;
 import com.intellij.psi.PsiNamedElement;
 import com.zj.caseswitcher.enums.CaseModelEnum;
+import com.zj.caseswitcher.setting.CaseModelSettings;
 import com.zj.caseswitcher.utils.CaseCache;
 import com.zj.caseswitcher.utils.CaseUtils;
 import com.zj.caseswitcher.utils.ElementUtils;
@@ -23,6 +25,7 @@ import com.zj.caseswitcher.vo.ToggleState;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -55,7 +58,7 @@ public class CaseChooserActionHandler extends CaseActionHandler {
             HintManager.getInstance().showErrorHint(editor, "No case model");
             return;
         }
-        ToggleState toggleState = CaseCache.getToggleState(cache, selectedText);
+        ToggleState toggleState = CaseCache.getSingleToggleState(cache, selectedText);
         PsiNamedElement element = ElementUtils.getPsiNamedElement(project, editor, caretVo);
         NamesValidator validator = Objects.isNull(element) ? null : LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
         // 生成所有转换结果
@@ -72,7 +75,7 @@ public class CaseChooserActionHandler extends CaseActionHandler {
             AnAction anAction = new AnAction() {
                 @Override
                 public void actionPerformed(@NotNull AnActionEvent e) {
-                    SingletonRenameHandler.rename(caretVo, toggleState, editor, project, dataContext, caseVo, element);
+                    rename(caretVo, toggleState, editor, project, dataContext, caseVo, element);
                 }
             };
             // 设置子菜单选项文本，mayContainMnemonic=false防止快捷键转义
@@ -87,5 +90,41 @@ public class CaseChooserActionHandler extends CaseActionHandler {
                         JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
                         true)
                 .showInBestPositionFor(dataContext);
+    }
+
+    /**
+     * 指定重命名
+     */
+    public static void rename(@NotNull CaretVo caretVo,
+                              @NotNull ToggleState toggleState,
+                              @NotNull Editor editor,
+                              @NotNull Project project,
+                              @NotNull DataContext dataContext,
+                              @NotNull CaseVo caseVo,
+                              @Nullable PsiNamedElement element) {
+        Caret caret = caretVo.getCaret();
+        String selectedText = caretVo.getSelectTest();
+        if (StringUtils.isEmpty(selectedText)) {
+            return;
+        }
+        if (CaseModelSettings.getInstance().isRenameRelated()
+                && Objects.nonNull(element)
+                && !ElementUtils.readOnly(editor, element)) {
+            // 检查新名称是否有效
+            NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
+            if (!validator.isIdentifier(caseVo.getAfterText(), project)) {
+                HintManager.getInstance().showErrorHint(editor, "Invalid identifier: " + caseVo.getAfterText());
+            } else if (SingletonRenameHandler.tryRenameRelated(element, toggleState, project, dataContext, caseVo)) {
+                // 重命名成功
+                return;
+            }
+        }
+        // 只改当前变量名
+        SingletonRenameHandler.singletonRename(caseVo, editor, project, toggleState, caret);
+        if (Objects.nonNull(element) && ElementUtils.readOnly(editor, element)) {
+            HintManager.getInstance().showInformationHint(editor, "File is read-only");
+            logger.info("tryRenameRelated cannot modify read-only file");
+        }
+        logger.info("CaseChooserActionHandler rename toggleState next: " + toggleState);
     }
 }

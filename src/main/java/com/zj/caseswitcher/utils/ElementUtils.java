@@ -31,17 +31,21 @@ public class ElementUtils {
             return null;
         }
         logger.info("getPsiNamedElement element class: " + element.getClass());
+        return element;
+    }
+
+    public static boolean readOnly(@NotNull Editor editor, @NotNull PsiNamedElement element) {
         PsiFile psiFile = element.getContainingFile();
         if (psiFile == null) {
-            return null;
+            return true;
         }
         VirtualFile vFile = psiFile.getVirtualFile();
         if (vFile == null || !vFile.isWritable()) {
             HintManager.getInstance().showInformationHint(editor, "File is read-only");
             logger.info("getPsiNamedElement cannot modify read-only file");
-            return null;
+            return true;
         }
-        return element;
+        return false;
     }
 
     @Nullable
