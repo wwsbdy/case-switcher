@@ -292,4 +292,169 @@ public class CaseConversionReadableTest {
         // 检测space case
         assertTrue(blankConverter.isThisType("space case"));
     }
+    
+    // =======================================
+    // 新增测试场景：大写分隔符命名转换
+    // =======================================
+    
+    @Test
+    public void testUpperCaseSnakeCaseConversion() {
+        // 测试输入: CAMEL_CASE
+        String input = "CAMEL_CASE";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "camelCase");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "CamelCase");
+        assertConversion(input, CaseModelEnum.SNAKE, "camel_case");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "CAMEL_CASE");
+    }
+    
+    @Test
+    public void testUpperCaseDashCaseConversion() {
+        // 测试输入: CAMEL-CASE
+        String input = "CAMEL-CASE";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "camelCase");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "CamelCase");
+        assertConversion(input, CaseModelEnum.DASH, "camel-case");
+        assertConversion(input, CaseModelEnum.DASH_UPPER, "CAMEL-CASE");
+    }
+    
+    // =======================================
+    // 新增测试场景：数字位置场景
+    // =======================================
+    
+    @Test
+    public void testNumbersAtEndConversionMore() {
+        // 测试输入: user123
+        String input = "user123";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "user123");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "User123");
+        assertConversion(input, CaseModelEnum.SNAKE, "user_123");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "USER_123");
+    }
+    
+    // =======================================
+    // 新增测试场景：混合大小写缩写
+    // =======================================
+    
+    @Test
+    public void testMixedCaseAbbreviationConversion() {
+        // 测试输入: userID
+        String input = "userID";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "userId");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "UserId");
+        assertConversion(input, CaseModelEnum.SNAKE, "user_id");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "USER_ID");
+    }
+    
+    @Test
+    public void testInternalAbbreviationConversion() {
+        // 测试输入: httpURLRequest
+        String input = "httpURLRequest";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "httpUrlRequest");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "HttpUrlRequest");
+        assertConversion(input, CaseModelEnum.SNAKE, "http_url_request");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "HTTP_URL_REQUEST");
+    }
+    
+    // =======================================
+    // 新增测试场景：特殊长度字符串
+    // =======================================
+    
+    @Test
+    public void testTwoCharacterUpperCaseConversion() {
+        // 测试输入: AB
+        String input = "AB";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "ab");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "Ab");
+        assertConversion(input, CaseModelEnum.SNAKE, "ab");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "AB");
+    }
+    
+    // =======================================
+    // 新增测试场景：分隔符异常情况
+    // =======================================
+    
+    @Test
+    public void testLeadingTrailingSeparatorConversion() {
+        // 测试输入: _user (前导下划线)
+        String input1 = "_user";
+        assertConversion(input1, CaseModelEnum.CAMEL, "user");
+        
+        // 测试输入: user_ (尾随下划线)
+        String input2 = "user_";
+        assertConversion(input2, CaseModelEnum.CAMEL, "user");
+        
+        // 测试输入: -user (前导短横线)
+        String input3 = "-user";
+        assertConversion(input3, CaseModelEnum.CAMEL, "user");
+        
+        // 测试输入: user- (尾随短横线)
+        String input4 = "user-";
+        assertConversion(input4, CaseModelEnum.CAMEL, "user");
+    }
+    
+    @Test
+    public void testConsecutiveSeparatorsConversion() {
+        // 测试输入: user__id (连续下划线)
+        String input1 = "user__id";
+        assertConversion(input1, CaseModelEnum.CAMEL, "userId");
+        
+        // 测试输入: user--id (连续短横线)
+        String input2 = "user--id";
+        assertConversion(input2, CaseModelEnum.CAMEL, "userId");
+        
+        // 测试输入: user  id (连续空格)
+        String input3 = "user  id";
+        assertConversion(input3, CaseModelEnum.CAMEL, "userId");
+    }
+    
+    // =======================================
+    // 新增测试场景：全小写多字符字符串
+    // =======================================
+    
+    @Test
+    public void testAllLowerCaseConversion() {
+        // 测试输入: user
+        String input = "user";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "user");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "User");
+        assertConversion(input, CaseModelEnum.SNAKE, "user");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "USER");
+    }
+    
+    // =======================================
+    // 新增测试场景：纯数字字符串
+    // =======================================
+    
+    @Test
+    public void testPureNumbersConversion() {
+        // 测试输入: 123
+        String input = "123";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "123");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "123");
+        assertConversion(input, CaseModelEnum.SNAKE, "123");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "123");
+    }
+    
+    // =======================================
+    // 新增测试场景：复杂混合场景
+    // =======================================
+    
+    @Test
+    public void testComplexMixedConversion() {
+        // 测试输入: USER123_NAME-ID
+        String input = "USER123_NAME-ID";
+        
+        assertConversion(input, CaseModelEnum.CAMEL, "user123NameId");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "User123NameId");
+        assertConversion(input, CaseModelEnum.SNAKE, "user_123_name_id");
+        assertConversion(input, CaseModelEnum.SNAKE_UPPER, "USER_123_NAME_ID");
+    }
 }
