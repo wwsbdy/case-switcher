@@ -28,8 +28,22 @@ public class CamelCaseModel implements ICaseModel {
         StringBuilder sb = new StringBuilder();
         boolean nextUpper = false;
         boolean previousUpper = false;
+        int continuousUpperCount = 0;
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
+            // 是大写字母
+            if (c == Character.toUpperCase(c) && Character.isLetter(c)) {
+                continuousUpperCount++;
+            } else {
+                // 连续大写超过1，且当前不再连续大写，将前一个字母变为大写
+                if (continuousUpperCount > 1 && sb.length() > 0 && Character.isLetter(c)) {
+                    char previousChar = sb.charAt(sb.length() - 1);
+                    if (Character.isLetter(previousChar)) {
+                        sb.setCharAt(sb.length() - 1, Character.toUpperCase(previousChar));
+                    }
+                }
+                continuousUpperCount = 0;
+            }
             if (c == '_' || c == '-' || c == ' ') {
                 nextUpper = true;
             } else if (nextUpper) {

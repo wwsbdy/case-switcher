@@ -1,6 +1,6 @@
 package com.zj.caseswitcher.interfaces.impl;
 
-import com.zj.caseswitcher.interfaces.ICaseModel;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -9,8 +9,12 @@ import org.jetbrains.annotations.NotNull;
  * @author : jie.zhou
  * @date : 2025/11/7
  */
-public class CamelUpperCaseModel implements ICaseModel {
+public class CamelUpperCaseModel extends AbsSeparatorCaseModel {
     public static final CamelUpperCaseModel INSTANCE = new CamelUpperCaseModel();
+
+    public CamelUpperCaseModel() {
+        super('_', true);
+    }
 
     @Override
     public boolean isThisType(@NotNull String text) {
@@ -25,7 +29,7 @@ public class CamelUpperCaseModel implements ICaseModel {
     @Override
     public @NotNull String convert(@NotNull String text) {
         String convert = CamelCaseModel.INSTANCE.convert(text);
-        if (convert.length() > 1) {
+        if (StringUtils.isNotEmpty(convert)) {
             return convert.substring(0, 1).toUpperCase() + convert.substring(1);
         }
         return convert;

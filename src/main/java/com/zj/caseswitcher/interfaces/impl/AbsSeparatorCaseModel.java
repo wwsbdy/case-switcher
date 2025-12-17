@@ -20,6 +20,7 @@ public abstract class AbsSeparatorCaseModel implements ICaseModel {
     public static final Set<Character> SEPARATOR_SET;
 
     private final String separator;
+    private final boolean upperFirstLetter;
 
     static {
         SEPARATOR_SET = new HashSet<>();
@@ -29,13 +30,18 @@ public abstract class AbsSeparatorCaseModel implements ICaseModel {
     }
 
     public AbsSeparatorCaseModel(char separator) {
+        this(separator, false);
+    }
+
+    public AbsSeparatorCaseModel(char separator, boolean upperFirstLetter) {
         this.separator = String.valueOf(separator);
+        this.upperFirstLetter = upperFirstLetter;
     }
 
     @Override
     public boolean isThisType(@NotNull String text) {
-        // 含有分隔符 且全小写
-        return text.contains(separator) && text.equals(text.toLowerCase());
+        // 含有分隔符 且不是全部大写
+        return text.contains(separator) && !text.equals(text.toUpperCase());
     }
 
     @Override
@@ -45,19 +51,27 @@ public abstract class AbsSeparatorCaseModel implements ICaseModel {
         }
         StringBuilder sb = new StringBuilder();
         boolean previousSeparator = false;
+        boolean previousUpper = false;
         boolean allUpper = text.equals(text.toUpperCase());
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
-            if (i > 0 && Character.isUpperCase(c) && !previousSeparator && !allUpper) {
+            if (i > 0 && Character.isUpperCase(c) && !previousSeparator && !allUpper && !previousUpper) {
                 sb.append(separator);
-                sb.append(Character.toLowerCase(c));
-                previousSeparator = c == Character.toUpperCase(c);
+                sb.append(upperFirstLetter ? Character.toUpperCase(c) : Character.toLowerCase(c));
+                previousUpper = c == Character.toUpperCase(c);
             } else if (SEPARATOR_SET.contains(c)) {
                 sb.append(separator);
                 previousSeparator = true;
             } else {
-                sb.append(Character.toLowerCase(c));
-                previousSeparator = c == Character.toUpperCase(c);
+                if ((i == 0 || previousSeparator) && upperFirstLetter) {
+                    sb.append(Character.toUpperCase(c));
+                } else {
+                    sb.append(Character.toLowerCase(c));
+                }
+                previousUpper = c == Character.toUpperCase(c);
+                if (previousSeparator) {
+                    previousSeparator = false;
+                }
             }
         }
         return sb.toString();
