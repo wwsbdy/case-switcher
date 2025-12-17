@@ -57,15 +57,9 @@ public class SingletonRenameHandler {
         ToggleState toggleState = CaseCache.getSingleToggleState(cacheVo, selectedText);
         List<CaseModelEnum> allCaseModels = CaseUtils.getAllCaseModel(cacheVo.getOriginalCaseModelEnum());
         PsiNamedElement element = ElementUtils.getPsiNamedElement(project, editor, caretVo);
-        // 只读文件，只改当前变量名
-        if (Objects.nonNull(element) && ElementUtils.readOnly(editor, element)) {
-            CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels);
-            singletonRename(caseVo, editor, project, toggleState, caret);
-            HintManager.getInstance().showInformationHint(editor, "File is read-only");
-            logger.info("tryRenameRelated cannot modify read-only file");
-            return;
-        }
-        if (CaseModelSettings.getInstance().isRenameRelated() && Objects.nonNull(element)) {
+        if (CaseModelSettings.getInstance().isRenameRelated()
+                && Objects.nonNull(element)
+                && !ElementUtils.readOnly(editor, element)) {
             NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
             CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels, text -> validator.isIdentifier(text, project));
             if (tryRenameRelated(element, toggleState, project, dataContext, caseVo)) {
@@ -75,6 +69,10 @@ public class SingletonRenameHandler {
         CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels);
         // 只改当前变量名
         singletonRename(caseVo, editor, project, toggleState, caret);
+        if (Objects.nonNull(element) && ElementUtils.readOnly(editor, element)) {
+            HintManager.getInstance().showInformationHint(editor, "File is read-only");
+            logger.info("tryRenameRelated cannot modify read-only file");
+        }
         logger.info("rename toggleState next: " + toggleState);
     }
 
@@ -110,10 +108,10 @@ public class SingletonRenameHandler {
      * 尝试使用 RenameProcessor 更新引用
      */
     public static boolean tryRenameRelated(@NotNull PsiNamedElement element,
-                                            @NotNull ToggleState toggleState,
-                                            @NotNull Project project,
-                                            @Nullable DataContext dataContext,
-                                            @NotNull CaseVo caseVo) {
+                                           @NotNull ToggleState toggleState,
+                                           @NotNull Project project,
+                                           @Nullable DataContext dataContext,
+                                           @NotNull CaseVo caseVo) {
         if (Objects.isNull(dataContext)) {
             logger.info("tryRenameRelated dataContext is null");
             return false;

@@ -107,14 +107,9 @@ public class CaseChooserActionHandler extends CaseActionHandler {
         if (StringUtils.isEmpty(selectedText)) {
             return;
         }
-        // 只读文件，只改当前变量名
-        if (Objects.nonNull(element) && ElementUtils.readOnly(editor, element)) {
-            SingletonRenameHandler.singletonRename(caseVo, editor, project, toggleState, caret);
-            HintManager.getInstance().showInformationHint(editor, "File is read-only");
-            logger.info("tryRenameRelated cannot modify read-only file");
-            return;
-        }
-        if (CaseModelSettings.getInstance().isRenameRelated() && Objects.nonNull(element)) {
+        if (CaseModelSettings.getInstance().isRenameRelated()
+                && Objects.nonNull(element)
+                && !ElementUtils.readOnly(editor, element)) {
             // 检查新名称是否有效
             NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
             if (!validator.isIdentifier(caseVo.getAfterText(), project)) {
@@ -126,6 +121,10 @@ public class CaseChooserActionHandler extends CaseActionHandler {
         }
         // 只改当前变量名
         SingletonRenameHandler.singletonRename(caseVo, editor, project, toggleState, caret);
+        if (Objects.nonNull(element) && ElementUtils.readOnly(editor, element)) {
+            HintManager.getInstance().showInformationHint(editor, "File is read-only");
+            logger.info("tryRenameRelated cannot modify read-only file");
+        }
         logger.info("CaseChooserActionHandler rename toggleState next: " + toggleState);
     }
 }
