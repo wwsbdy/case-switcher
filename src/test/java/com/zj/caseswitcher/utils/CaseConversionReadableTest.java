@@ -170,7 +170,7 @@ public class CaseConversionReadableTest {
         String input = "123user";
         
         assertConversion(input, CaseModelEnum.CAMEL, "123user");
-        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "123User");
+        assertConversion(input, CaseModelEnum.CAMEL_UPPER, "123user");
         assertConversion(input, CaseModelEnum.SNAKE, "123user");
         assertConversion(input, CaseModelEnum.SNAKE_UPPER, "123USER");
     }

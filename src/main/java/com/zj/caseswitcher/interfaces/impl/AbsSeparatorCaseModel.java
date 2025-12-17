@@ -1,12 +1,8 @@
 package com.zj.caseswitcher.interfaces.impl;
 
-import com.zj.caseswitcher.interfaces.ICaseModel;
 import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
+import lombok.EqualsAndHashCode;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * 抽象分隔符命名风格
@@ -14,20 +10,12 @@ import java.util.Set;
  * @author : jie.zhou
  * @date : 2025/11/13
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
-public abstract class AbsSeparatorCaseModel implements ICaseModel {
-
-    public static final Set<Character> SEPARATOR_SET;
+public abstract class AbsSeparatorCaseModel extends AbsCaseModel {
 
     private final String separator;
     private final boolean upperFirstLetter;
-
-    static {
-        SEPARATOR_SET = new HashSet<>();
-        SEPARATOR_SET.add('_');
-        SEPARATOR_SET.add('-');
-        SEPARATOR_SET.add(' ');
-    }
 
     public AbsSeparatorCaseModel(char separator) {
         this(separator, false);
@@ -45,35 +33,31 @@ public abstract class AbsSeparatorCaseModel implements ICaseModel {
     }
 
     @Override
-    public @NotNull String convert(@NotNull String text) {
-        if (StringUtils.isBlank(text)) {
-            return text;
+    protected void appendFirstChar(StringBuilder sb, char c) {
+        if (upperFirstLetter) {
+            sb.append(Character.toUpperCase(c));
+        } else {
+            sb.append(Character.toLowerCase(c));
         }
-        StringBuilder sb = new StringBuilder();
-        boolean previousSeparator = false;
-        boolean previousUpper = false;
-        boolean allUpper = text.equals(text.toUpperCase());
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (i > 0 && Character.isUpperCase(c) && !previousSeparator && !allUpper && !previousUpper) {
-                sb.append(separator);
-                sb.append(upperFirstLetter ? Character.toUpperCase(c) : Character.toLowerCase(c));
-                previousUpper = c == Character.toUpperCase(c);
-            } else if (SEPARATOR_SET.contains(c)) {
-                sb.append(separator);
-                previousSeparator = true;
-            } else {
-                if ((i == 0 || previousSeparator) && upperFirstLetter) {
-                    sb.append(Character.toUpperCase(c));
-                } else {
-                    sb.append(Character.toLowerCase(c));
-                }
-                previousUpper = c == Character.toUpperCase(c);
-                if (previousSeparator) {
-                    previousSeparator = false;
-                }
-            }
+    }
+
+    @Override
+    protected void appendFirstCharOfWord(StringBuilder sb, char c) {
+        appendSeparator(sb);
+        if (upperFirstLetter) {
+            sb.append(Character.toUpperCase(c));
+        } else {
+            sb.append(Character.toLowerCase(c));
         }
-        return sb.toString();
+    }
+
+    @Override
+    protected void appendOtherCharOfWord(StringBuilder sb, char c) {
+        sb.append(Character.toLowerCase(c));
+    }
+
+    @Override
+    protected void appendSeparator(StringBuilder sb) {
+        sb.append(separator);
     }
 }

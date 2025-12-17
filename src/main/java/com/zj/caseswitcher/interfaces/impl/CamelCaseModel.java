@@ -1,6 +1,5 @@
 package com.zj.caseswitcher.interfaces.impl;
 
-import com.zj.caseswitcher.interfaces.ICaseModel;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -9,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
  * @author : jie.zhou
  * @date : 2025/11/7
  */
-public class CamelCaseModel implements ICaseModel {
+public class CamelCaseModel extends AbsCaseModel {
 
     public static final CamelCaseModel INSTANCE = new CamelCaseModel();
 
@@ -24,41 +23,21 @@ public class CamelCaseModel implements ICaseModel {
     }
 
     @Override
-    public @NotNull String convert(@NotNull String text) {
-        StringBuilder sb = new StringBuilder();
-        boolean nextUpper = false;
-        boolean previousUpper = false;
-        int continuousUpperCount = 0;
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            // 是大写字母
-            if (c == Character.toUpperCase(c) && Character.isLetter(c)) {
-                continuousUpperCount++;
-            } else {
-                // 连续大写超过1，且当前不再连续大写，将前一个字母变为大写
-                if (continuousUpperCount > 1 && sb.length() > 0 && Character.isLetter(c)) {
-                    char previousChar = sb.charAt(sb.length() - 1);
-                    if (Character.isLetter(previousChar)) {
-                        sb.setCharAt(sb.length() - 1, Character.toUpperCase(previousChar));
-                    }
-                }
-                continuousUpperCount = 0;
-            }
-            if (c == '_' || c == '-' || c == ' ') {
-                nextUpper = true;
-            } else if (nextUpper) {
-                sb.append(Character.toUpperCase(c));
-                nextUpper = false;
-                previousUpper = true;
-            } else {
-                if (previousUpper || i == 0) {
-                    sb.append(Character.toLowerCase(c));
-                } else {
-                    sb.append(c);
-                }
-                previousUpper = c == Character.toUpperCase(c);
-            }
-        }
-        return sb.toString();
+    protected void appendFirstChar(StringBuilder sb, char c) {
+        sb.append(Character.toLowerCase(c));
+    }
+
+    @Override
+    protected void appendFirstCharOfWord(StringBuilder sb, char c) {
+        sb.append(Character.toUpperCase(c));
+    }
+
+    @Override
+    protected void appendOtherCharOfWord(StringBuilder sb, char c) {
+        sb.append(Character.toLowerCase(c));
+    }
+
+    @Override
+    protected void appendSeparator(StringBuilder sb) {
     }
 }

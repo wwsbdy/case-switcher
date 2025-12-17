@@ -2,11 +2,15 @@ package com.zj.caseswitcher.interfaces.impl;
 
 import com.zj.caseswitcher.interfaces.ICaseModel;
 import lombok.Data;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 抽象分隔符命名风格
@@ -33,37 +37,50 @@ public abstract class AbsCaseModel implements ICaseModel {
             return text;
         }
         StringBuilder sb = new StringBuilder();
-        CharQueue charQueue = new CharQueue();
+        List<Character> charList = new ArrayList<>();
+        AtomicBoolean isFirstChar = new AtomicBoolean(true);
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
             if (SEPARATOR_SET.contains(c)) {
                 // 分隔符，清空队列，让下一个字符为单词首字母
-                appendSeparator(sb);
-                charQueue.clear();
+                appendWordAndClear(sb, charList, isFirstChar);
                 continue;
             }
-            if (i == 0) {
-                appendFirstChar(sb, c);
-                charQueue.add(c);
+            if (CollectionUtils.isEmpty(charList)) {
+                charList.add(c);
                 continue;
             }
-            // 队列空，添加大写字母到队列，当前作为单词首字母添加到结果中
-            if (charQueue.isEmpty()) {
-                charQueue.add(Character.toUpperCase(c));
-                appendFirstCharOfWord(sb, c);
-            } else {
-                char previousChar = charQueue.poll();
-                // 前一个是小写字母，当前是大写字母，当前作为单词首字母添加到结果中
-                if (Character.isLowerCase(previousChar) && Character.isUpperCase(c)) {
-                    appendFirstCharOfWord(sb, c);
-                    charQueue.add(Character.toUpperCase(c));
-                } else {
-                    appendOtherCharOfWord(sb, c);
-                    charQueue.add(Character.toLowerCase(c));
-                }
+            char previousChar = charList.get(charList.size() - 1);
+            // 前一个是大写字母，当前是小写字母，当前作为单词首字母添加到结果中
+            if (Character.isLowerCase(c) && Character.isUpperCase(previousChar)) {
+                charList.remove(charList.size() - 1);
+                appendWordAndClear(sb, charList, isFirstChar);
+                charList.add(previousChar);
             }
+            charList.add(c);
         }
+        appendWordAndClear(sb, charList, isFirstChar);
         return sb.toString();
+    }
+
+    private void appendWordAndClear(StringBuilder sb, List<Character> charList, AtomicBoolean isFirstChar) {
+        if (CollectionUtils.isEmpty(charList)) {
+            return;
+        }
+        for (int i = 0; i < charList.size(); i++) {
+            char c = charList.get(i);
+            if (i == 0) {
+                if (isFirstChar.get()) {
+                    appendFirstChar(sb, c);
+                    isFirstChar.set(false);
+                } else {
+                    appendFirstCharOfWord(sb, c);
+                }
+                continue;
+            }
+            appendOtherCharOfWord(sb, c);
+        }
+        charList.clear();
     }
 
     /**
@@ -85,33 +102,4 @@ public abstract class AbsCaseModel implements ICaseModel {
      * 添加分隔符
      */
     protected abstract void appendSeparator(StringBuilder sb);
-
-
-    private static class CharQueue {
-        private final char[] chars = new char[2];
-        private int head = 0;
-        private int tail = 0;
-
-        public void add(char c) {
-            chars[tail++ % chars.length] = c;
-        }
-
-        public char poll() {
-            return chars[head++ % chars.length];
-        }
-
-        public boolean isEmpty() {
-            return head == tail;
-        }
-
-
-        public int size() {
-            return (tail - head + chars.length) % chars.length;
-        }
-
-        public void clear() {
-            head = 0;
-            tail = 0;
-        }
-    }
 }
