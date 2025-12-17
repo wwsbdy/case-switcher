@@ -51,12 +51,13 @@ public abstract class AbsSeparatorCaseModel implements ICaseModel {
             if (i > 0 && Character.isUpperCase(c) && !previousSeparator && !allUpper) {
                 sb.append(separator);
                 sb.append(Character.toLowerCase(c));
+                previousSeparator = c == Character.toUpperCase(c);
             } else if (SEPARATOR_SET.contains(c)) {
                 sb.append(separator);
                 previousSeparator = true;
             } else {
-                previousSeparator = false;
                 sb.append(Character.toLowerCase(c));
+                previousSeparator = c == Character.toUpperCase(c);
             }
         }
         return sb.toString();

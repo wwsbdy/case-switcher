@@ -27,7 +27,7 @@ public class CamelCaseModel implements ICaseModel {
     public @NotNull String convert(@NotNull String text) {
         StringBuilder sb = new StringBuilder();
         boolean nextUpper = false;
-        boolean allUpper = text.equals(text.toUpperCase());
+        boolean previousUpper = false;
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
             if (c == '_' || c == '-' || c == ' ') {
@@ -35,12 +35,14 @@ public class CamelCaseModel implements ICaseModel {
             } else if (nextUpper) {
                 sb.append(Character.toUpperCase(c));
                 nextUpper = false;
+                previousUpper = true;
             } else {
-                if (allUpper || i == 0) {
+                if (previousUpper || i == 0) {
                     sb.append(Character.toLowerCase(c));
                 } else {
                     sb.append(c);
                 }
+                previousUpper = c == Character.toUpperCase(c);
             }
         }
         return sb.toString();
