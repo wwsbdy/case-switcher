@@ -2,13 +2,11 @@ package com.zj.caseswitcher.interfaces.impl;
 
 import com.zj.caseswitcher.interfaces.ICaseModel;
 import lombok.Data;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,44 +35,59 @@ public abstract class AbsCaseModel implements ICaseModel {
             return text;
         }
         StringBuilder sb = new StringBuilder();
-        List<Character> charList = new ArrayList<>();
+        Character previousChar = null;
+        StringBuilder wordSb = new StringBuilder();
         AtomicBoolean isFirstChar = new AtomicBoolean(true);
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
             if (SEPARATOR_SET.contains(c)) {
                 // 分隔符，清空队列，让下一个字符为单词首字母
-                appendWordAndClear(sb, charList, isFirstChar);
+                if (Objects.nonNull(previousChar)) {
+                    wordSb.append(previousChar);
+                }
+                appendWordAndClear(sb, wordSb, isFirstChar);
+                previousChar = null;
                 continue;
             }
-            if (CollectionUtils.isEmpty(charList)) {
-                charList.add(c);
+            if (Objects.isNull(previousChar)) {
+                previousChar = c;
                 continue;
             }
-            char previousChar = charList.get(charList.size() - 1);
             // 前一个是大写字母，当前是小写字母，当前作为单词首字母添加到结果中
             if (Character.isLowerCase(c) && Character.isUpperCase(previousChar)) {
-                charList.remove(charList.size() - 1);
-                appendWordAndClear(sb, charList, isFirstChar);
-                charList.add(previousChar);
+                appendWordAndClear(sb, wordSb, isFirstChar);
+                wordSb.append(previousChar);
+                previousChar = c;
+                continue;
             } else if (Character.isLetter(previousChar) != Character.isLetter(c)) {
                 // 前一个和当前类型异或，将收集到的字母添加到结果中
-                appendWordAndClear(sb, charList, isFirstChar);
+                wordSb.append(previousChar);
+                appendWordAndClear(sb, wordSb, isFirstChar);
+                previousChar = c;
+                continue;
             } else if (Character.isUpperCase(c) && Character.isLowerCase(previousChar)) {
                 // 前一个小写，当前大写，将收集到的字母添加到结果中
-                appendWordAndClear(sb, charList, isFirstChar);
+                wordSb.append(previousChar);
+                appendWordAndClear(sb, wordSb, isFirstChar);
+                previousChar = c;
+                continue;
             }
-            charList.add(c);
+            wordSb.append(previousChar);
+            previousChar = c;
         }
-        appendWordAndClear(sb, charList, isFirstChar);
+        if (Objects.nonNull(previousChar)) {
+            wordSb.append(previousChar);
+        }
+        appendWordAndClear(sb, wordSb, isFirstChar);
         return sb.toString();
     }
 
-    private void appendWordAndClear(StringBuilder sb, List<Character> charList, AtomicBoolean isFirstChar) {
-        if (CollectionUtils.isEmpty(charList)) {
+    private void appendWordAndClear(StringBuilder sb, StringBuilder wordSb, AtomicBoolean isFirstChar) {
+        if (StringUtils.isEmpty(wordSb)) {
             return;
         }
-        for (int i = 0; i < charList.size(); i++) {
-            char c = charList.get(i);
+        for (int i = 0; i < wordSb.length(); i++) {
+            char c = wordSb.charAt(i);
             if (i == 0) {
                 if (isFirstChar.get()) {
                     appendFirstChar(sb, c);
@@ -86,7 +99,7 @@ public abstract class AbsCaseModel implements ICaseModel {
             }
             appendOtherCharOfWord(sb, c);
         }
-        charList.clear();
+        wordSb.setLength(0);
     }
 
     /**
