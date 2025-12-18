@@ -17,9 +17,19 @@ public class CamelCaseModel extends AbsCaseModel {
         if (text.isEmpty()) {
             return false;
         }
-        // 首字母是小写，并且不是全部小写，并且没有下划线，没有连字符，没有空格
-        return Character.isLowerCase(text.charAt(0)) && !text.equals(text.toLowerCase())
-                && !text.contains("_") && !text.contains("-") && !text.contains(" ");
+        // 没有下划线，没有连字符，没有空格
+        if (text.contains("_") || text.contains("-") || text.contains(" ")) {
+            return false;
+        }
+        // 首字母是小写
+        if (!Character.isLowerCase(text.charAt(0))) {
+            return false;
+        }
+        if (text.length() == 1) {
+            return true;
+        }
+        // 并且不是全部小写
+        return !text.equals(text.toLowerCase());
     }
 
     @Override

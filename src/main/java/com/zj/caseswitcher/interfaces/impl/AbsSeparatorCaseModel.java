@@ -16,25 +16,49 @@ public abstract class AbsSeparatorCaseModel extends AbsCaseModel {
 
     private final String separator;
     private final boolean upperFirstLetter;
+    private final boolean allUpperCase;
 
     public AbsSeparatorCaseModel(char separator) {
         this(separator, false);
     }
 
     public AbsSeparatorCaseModel(char separator, boolean upperFirstLetter) {
+        this(separator, upperFirstLetter, false);
+    }
+
+    public AbsSeparatorCaseModel(char separator, boolean upperFirstLetter, boolean allUpperCase) {
         this.separator = String.valueOf(separator);
         this.upperFirstLetter = upperFirstLetter;
+        this.allUpperCase = allUpperCase;
     }
 
     @Override
     public boolean isThisType(@NotNull String text) {
-        // 含有分隔符 且不是全部大写
-        return text.contains(separator) && !text.equals(text.toUpperCase());
+        if (text.isEmpty()) {
+            return false;
+        }
+        // 含有分隔符
+        if (!text.contains(separator)) {
+            return false;
+        }
+        boolean allUpperCase = text.equals(text.toUpperCase());
+        if (this.allUpperCase) {
+            // 全部大写
+            return allUpperCase;
+        }
+        if (allUpperCase) {
+            return false;
+        }
+        if (upperFirstLetter) {
+            // 首字母大写
+            return Character.isUpperCase(text.charAt(0));
+        }
+        return true;
     }
 
     @Override
     protected void appendFirstChar(StringBuilder sb, char c) {
-        if (upperFirstLetter) {
+        if (upperFirstLetter || allUpperCase) {
             sb.append(Character.toUpperCase(c));
         } else {
             sb.append(Character.toLowerCase(c));
@@ -44,7 +68,7 @@ public abstract class AbsSeparatorCaseModel extends AbsCaseModel {
     @Override
     protected void appendFirstCharOfWord(StringBuilder sb, char c) {
         appendSeparator(sb);
-        if (upperFirstLetter) {
+        if (upperFirstLetter || allUpperCase) {
             sb.append(Character.toUpperCase(c));
         } else {
             sb.append(Character.toLowerCase(c));
@@ -53,7 +77,11 @@ public abstract class AbsSeparatorCaseModel extends AbsCaseModel {
 
     @Override
     protected void appendOtherCharOfWord(StringBuilder sb, char c) {
-        sb.append(Character.toLowerCase(c));
+        if (allUpperCase) {
+            sb.append(Character.toUpperCase(c));
+        } else {
+            sb.append(Character.toLowerCase(c));
+        }
     }
 
     @Override
