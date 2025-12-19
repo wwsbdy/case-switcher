@@ -54,28 +54,52 @@ public class SingletonRenameHandler {
         if (StringUtils.isEmpty(selectedText)) {
             return;
         }
+        
         ToggleState toggleState = CaseCache.getSingleToggleState(cacheVo, selectedText);
         List<CaseModelEnum> allCaseModels = CaseUtils.getAllCaseModel(cacheVo.getOriginalCaseModelEnum());
         PsiNamedElement element = ElementUtils.getPsiNamedElement(project, editor, caretVo);
+        
+        // 尝试关联重命名
+        if (tryRelatedRename(up, toggleState, allCaseModels, element, project, dataContext, editor)) {
+            return;
+        }
+        
+        // 执行单选中重命名
+        CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels);
+        singletonRename(caseVo, editor, project, toggleState, caret);
+        
+        // 处理只读元素提示
+        if (Objects.nonNull(element) && ElementUtils.readOnly(editor, element)) {
+            HintManager.getInstance().showInformationHint(editor, "Element is read-only");
+            logger.info("rename: cannot rename related, element is read-only");
+        }
+        
+        logger.info("rename: singleton rename completed, toggleState: " + toggleState);
+    }
+
+    /**
+     * 尝试关联重命名
+     */
+    private static boolean tryRelatedRename(boolean up,
+                                           ToggleState toggleState,
+                                           List<CaseModelEnum> allCaseModels,
+                                           PsiNamedElement element,
+                                           Project project,
+                                           DataContext dataContext,
+                                           Editor editor) {
         if (CaseModelSettings.getInstance().isRenameRelated()
                 && Objects.nonNull(element)
                 && !ElementUtils.readOnly(editor, element)) {
             NamesValidator validator = LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
             CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels, text -> validator.isIdentifier(text, project));
+            
             if (tryRenameRelated(element, toggleState, project, dataContext, caseVo)) {
-                return;
+                logger.info("tryRelatedRename: related rename successful");
+                return true;
             }
         }
-        CaseVo caseVo = CaseUtils.tryConvert(up, toggleState, allCaseModels);
-        // 只改当前变量名
-        singletonRename(caseVo, editor, project, toggleState, caret);
-        if (Objects.nonNull(element) && ElementUtils.readOnly(editor, element)) {
-            HintManager.getInstance().showInformationHint(editor, "Element is read-only");
-            logger.info("tryRenameRelated cannot modify read-only file");
-        }
-        logger.info("rename toggleState next: " + toggleState);
+        return false;
     }
-
 
     /**
      * 单选中重命名，只改当前变量名
@@ -86,22 +110,40 @@ public class SingletonRenameHandler {
                                        @NotNull ToggleState toggleState,
                                        @NotNull Caret caret) {
         String next = caseVo.getAfterText();
-        Document document = editor.getDocument();
-        try {
-            WriteCommandAction.runWriteCommandAction(project, () ->
-                    document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), next)
-            );
-        } catch (ReadOnlyModificationException e) {
-            HintManager.getInstance().showInformationHint(editor, "File is read-only");
-            logger.error(e);
-        }
-        // 更新选择的文本
-        toggleState.setCaseModelEnum(caseVo.getAfterCaseModelEnum());
-        toggleState.setSelectedText(next);
-
+        
+        // 执行文档替换
+        replaceDocumentText(project, editor, caret, next);
+        
+        // 更新转换状态
+        updateToggleState(toggleState, caseVo);
+        
+        // 处理关联重命名状态
         if (toggleState.isRelated()) {
             HintManager.getInstance().showErrorHint(editor, "Same identifier not modified");
         }
+    }
+    
+    /**
+     * 执行文档替换
+     */
+    private static void replaceDocumentText(Project project, Editor editor, Caret caret, String newText) {
+        Document document = editor.getDocument();
+        try {
+            WriteCommandAction.runWriteCommandAction(project, () ->
+                    document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), newText)
+            );
+        } catch (ReadOnlyModificationException e) {
+            HintManager.getInstance().showInformationHint(editor, "File is read-only");
+            logger.error("replaceDocumentText: cannot modify read-only file: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 更新转换状态
+     */
+    private static void updateToggleState(ToggleState toggleState, CaseVo caseVo) {
+        toggleState.setCaseModelEnum(caseVo.getAfterCaseModelEnum());
+        toggleState.setSelectedText(caseVo.getAfterText());
     }
 
     /**
@@ -112,33 +154,44 @@ public class SingletonRenameHandler {
                                            @NotNull Project project,
                                            @Nullable DataContext dataContext,
                                            @NotNull CaseVo caseVo) {
+        // 验证数据上下文
         if (Objects.isNull(dataContext)) {
-            logger.info("tryRenameRelated dataContext is null");
+            logger.info("tryRenameRelated: dataContext is null");
             return false;
         }
+        
+        // 验证重命名处理器是否可用
         if (!RenameHandlerRegistry.getInstance().hasAvailableHandler(dataContext)) {
-            logger.info("tryRenameRelated no rename handler available");
+            logger.info("tryRenameRelated: no rename handler available");
             return false;
         }
+        
         try {
+            // 验证当前选中文本与元素名称是否一致
             if (!toggleState.getSelectedText().equals(element.getName())) {
-                logger.info("tryRenameRelated name not equals");
+                logger.info("tryRenameRelated: name not equals");
                 return false;
             }
+            
             String next = caseVo.getAfterText();
+            // 验证新名称是否与当前名称相同
             if (next.equals(toggleState.getSelectedText())) {
-//                    HintManager.getInstance().showInformationHint(editor, "Identifier is invalid");
-                logger.info("tryRenameRelated next is not a valid identifier");
+                logger.info("tryRenameRelated: next is not a valid identifier");
                 return true;
             }
+            
+            // 执行关联重命名
             renameRelation(toggleState, project, element, caseVo);
             return true;
         } catch (Exception e) {
-            logger.error(e);
+            logger.error("tryRenameRelated: " + e.getMessage());
         }
         return false;
     }
 
+    /**
+     * 执行关联重命名
+     */
     private static void renameRelation(@NotNull ToggleState toggleState, @NotNull Project project,
                                        PsiNamedElement element, @NotNull CaseVo caseVo) {
         String next = caseVo.getAfterText();
@@ -147,10 +200,12 @@ public class SingletonRenameHandler {
                 new ProjectScopeImpl(project, FileIndexFacade.getInstance(project)),
                 false, false);
         renameProcessor.run();
-        // 更新选择的文本
+        
+        // 更新选择的文本和状态
         toggleState.setCaseModelEnum(caseVo.getAfterCaseModelEnum());
         toggleState.setSelectedText(next);
-        logger.info("tryRenameRelated toggleState next: " + toggleState);
         toggleState.setRelated(true);
+        
+        logger.info("renameRelation: tryRenameRelated toggleState next: " + toggleState);
     }
 }

@@ -40,35 +40,74 @@ public class CaseChooserActionHandler extends CaseActionHandler {
     private static final Logger logger = Logger.getInstance(CaseChooserActionHandler.class);
 
     @Override
-    protected void execute(@NotNull Editor editor, DataContext dataContext,
+    protected void execute(@NotNull Editor editor, DataContext dataContext, 
                            @NotNull List<CaretVo> caretVoList, @NotNull CacheVo cache, @NotNull Project project) {
-        if (caretVoList.size() != 1) {
-            logger.warn("CaseChooserActionHandler only support one caret");
-            HintManager.getInstance().showInformationHint(editor, "Not only one");
+        // 验证是否只有一个选区
+        if (!validateSingleCaret(caretVoList, editor)) {
             return;
         }
+        
         CaretVo caretVo = caretVoList.get(0);
         String selectedText = caretVo.getSelectTest();
         if (StringUtils.isEmpty(selectedText)) {
             return;
         }
+        
+        // 验证是否配置了转换模型
         List<CaseModelEnum> caseModelEnumList = CaseUtils.getConfiguredCaseModel();
         if (CollectionUtils.isEmpty(caseModelEnumList)) {
-            logger.warn("CaseChooserActionHandler no case model");
+            logger.warn("execute: no case model configured");
             HintManager.getInstance().showErrorHint(editor, "No case model");
             return;
         }
+        
+        // 获取转换状态和元素
         ToggleState toggleState = CaseCache.getSingleToggleState(cache, selectedText);
         PsiNamedElement element = ElementUtils.getPsiNamedElement(project, editor, caretVo);
         NamesValidator validator = Objects.isNull(element) ? null : LanguageNamesValidation.INSTANCE.forLanguage(element.getLanguage());
+        
         // 生成所有转换结果
+        List<CaseVo> caseVos = generateCaseVos(toggleState, caseModelEnumList, validator, project, selectedText);
+        
+        // 创建并显示菜单
+        showCaseMenu(caseVos, editor, dataContext, caretVo, toggleState, project, element);
+    }
+    
+    /**
+     * 验证是否只有一个选区
+     */
+    private boolean validateSingleCaret(List<CaretVo> caretVoList, Editor editor) {
+        if (caretVoList.size() != 1) {
+            logger.warn("validateSingleCaret: CaseChooserActionHandler only supports one caret");
+            HintManager.getInstance().showInformationHint(editor, "Not only one");
+            return false;
+        }
+        return true;
+    }
+    
+    /**
+     * 生成转换结果列表
+     */
+    private List<CaseVo> generateCaseVos(ToggleState toggleState, List<CaseModelEnum> caseModelEnumList,
+                                         NamesValidator validator, Project project, String selectedText) {
         List<CaseVo> caseVos = CaseUtils.getAllConvert(toggleState, caseModelEnumList,
                 text -> Objects.isNull(validator) || validator.isIdentifier(text, project));
+        
+        // 处理空转换结果情况
         if (CollectionUtils.isEmpty(caseVos)) {
-            logger.info("CaseChooserActionHandler no case vo");
+            logger.info("generateCaseVos: no conversion results, using original text");
             CaseModelEnum caseModelEnum = toggleState.getCaseModelEnum();
             caseVos = Collections.singletonList(new CaseVo(selectedText, selectedText, caseModelEnum, caseModelEnum));
         }
+        
+        return caseVos;
+    }
+    
+    /**
+     * 创建并显示转换选项菜单
+     */
+    private void showCaseMenu(List<CaseVo> caseVos, Editor editor, DataContext dataContext,
+                             CaretVo caretVo, ToggleState toggleState, Project project, PsiNamedElement element) {
         // 创建动态子菜单组
         DefaultActionGroup subMenuGroup = new DefaultActionGroup();
         for (CaseVo caseVo : caseVos) {
@@ -82,6 +121,7 @@ public class CaseChooserActionHandler extends CaseActionHandler {
             anAction.getTemplatePresentation().setText(caseVo.getAfterText(), false);
             subMenuGroup.add(anAction);
         }
+        
         // 弹出子菜单（Popup Menu）
         JBPopupFactory.getInstance()
                 .createActionGroupPopup(null,
