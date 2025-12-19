@@ -6,9 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 抽象分隔符命名风格
@@ -34,72 +32,80 @@ public abstract class AbsCaseModel implements ICaseModel {
         if (StringUtils.isBlank(text)) {
             return text;
         }
-        StringBuilder sb = new StringBuilder();
-        Character previousChar = null;
-        StringBuilder wordSb = new StringBuilder();
-        AtomicBoolean isFirstChar = new AtomicBoolean(true);
+        
+        StringBuilder result = new StringBuilder();
+        StringBuilder currentWord = new StringBuilder();
+        boolean isFirstChar = true;
+        
         for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (SEPARATOR_SET.contains(c)) {
-                // 分隔符，清空队列，让下一个字符为单词首字母
-                if (Objects.nonNull(previousChar)) {
-                    wordSb.append(previousChar);
+            char current = text.charAt(i);
+            
+            // 处理分隔符
+            if (SEPARATOR_SET.contains(current)) {
+                if (currentWord.length() > 0) {
+                    appendWord(result, currentWord, isFirstChar);
+                    isFirstChar = false;
+                    currentWord.setLength(0);
                 }
-                appendWordAndClear(sb, wordSb, isFirstChar);
-                previousChar = null;
                 continue;
             }
-            if (Objects.isNull(previousChar)) {
-                previousChar = c;
-                continue;
+            
+            // 检查是否需要开始新单词
+            if (currentWord.length() > 0) {
+                char previous = currentWord.charAt(currentWord.length() - 1);
+                
+                // 1. 小写到大写 (camelCase → camel + Case)
+                if (Character.isLowerCase(previous) && Character.isUpperCase(current)) {
+                    appendWord(result, currentWord, isFirstChar);
+                    isFirstChar = false;
+                    currentWord.setLength(0);
+                }
+                // 2. 类型转换 (字母/数字之间转换，如 user123 → user + 123)
+                else if (Character.isLetter(previous) != Character.isLetter(current)) {
+                    appendWord(result, currentWord, isFirstChar);
+                    isFirstChar = false;
+                    currentWord.setLength(0);
+                }
+                // 3. 优化大写序列处理 (如 XMLHttpRequest → XML + Http + Request)
+                // 当多个大写字母后面跟着小写字母时，前面的大写字母作为一个单词
+                else if (Character.isUpperCase(previous) && Character.isUpperCase(current)) {
+                    // 检查下一个字符是否存在且为小写
+                    if (i + 1 < text.length() && Character.isLowerCase(text.charAt(i + 1))) {
+                        appendWord(result, currentWord, isFirstChar);
+                        isFirstChar = false;
+                        currentWord.setLength(0);
+                    }
+                }
             }
-            // 前一个是大写字母，当前是小写字母，当前作为单词首字母添加到结果中
-            if (Character.isLowerCase(c) && Character.isUpperCase(previousChar)) {
-                appendWordAndClear(sb, wordSb, isFirstChar);
-                wordSb.append(previousChar);
-                previousChar = c;
-                continue;
-            } else if (Character.isLetter(previousChar) != Character.isLetter(c)) {
-                // 前一个和当前类型异或，将收集到的字母添加到结果中
-                wordSb.append(previousChar);
-                appendWordAndClear(sb, wordSb, isFirstChar);
-                previousChar = c;
-                continue;
-            } else if (Character.isUpperCase(c) && Character.isLowerCase(previousChar)) {
-                // 前一个小写，当前大写，将收集到的字母添加到结果中
-                wordSb.append(previousChar);
-                appendWordAndClear(sb, wordSb, isFirstChar);
-                previousChar = c;
-                continue;
-            }
-            wordSb.append(previousChar);
-            previousChar = c;
+            
+            currentWord.append(current);
         }
-        if (Objects.nonNull(previousChar)) {
-            wordSb.append(previousChar);
+        
+        // 处理最后一个单词
+        if (currentWord.length() > 0) {
+            appendWord(result, currentWord, isFirstChar);
         }
-        appendWordAndClear(sb, wordSb, isFirstChar);
-        return sb.toString();
+        
+        return result.toString();
     }
 
-    private void appendWordAndClear(StringBuilder sb, StringBuilder wordSb, AtomicBoolean isFirstChar) {
-        if (StringUtils.isEmpty(wordSb)) {
+    private void appendWord(StringBuilder result, StringBuilder word, boolean isFirstChar) {
+        if (word.length() == 0) {
             return;
         }
-        for (int i = 0; i < wordSb.length(); i++) {
-            char c = wordSb.charAt(i);
-            if (i == 0) {
-                if (isFirstChar.get()) {
-                    appendFirstChar(sb, c);
-                    isFirstChar.set(false);
-                } else {
-                    appendFirstCharOfWord(sb, c);
-                }
-                continue;
-            }
-            appendOtherCharOfWord(sb, c);
+        
+        // 处理首字母
+        char firstChar = word.charAt(0);
+        if (isFirstChar) {
+            appendFirstChar(result, firstChar);
+        } else {
+            appendFirstCharOfWord(result, firstChar);
         }
-        wordSb.setLength(0);
+        
+        // 处理剩余字符
+        for (int i = 1; i < word.length(); i++) {
+            appendOtherCharOfWord(result, word.charAt(i));
+        }
     }
 
     /**
