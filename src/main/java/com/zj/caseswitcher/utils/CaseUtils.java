@@ -1,6 +1,7 @@
 package com.zj.caseswitcher.utils;
 
 import com.intellij.openapi.editor.Caret;
+import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.event.CaretEvent;
 import com.intellij.openapi.editor.event.CaretListener;
@@ -40,10 +41,7 @@ public class CaseUtils {
             return CaseModelEnum.RESET;
         }
         List<CaseModelEnum> allCaseModel = getAllCaseModel();
-        if (CollectionUtils.isEmpty(allCaseModel)) {
-            return CaseModelEnum.RESET;
-        }
-        return getCaseModelEnum(text, allCaseModel);
+        return CollectionUtils.isEmpty(allCaseModel) ? CaseModelEnum.RESET : getCaseModelEnum(text, allCaseModel);
     }
 
     private static @NotNull CaseModelEnum getCaseModelEnum(@NotNull String text, @NotNull List<CaseModelEnum> allCaseModel) {
@@ -62,23 +60,29 @@ public class CaseUtils {
         if (CollectionUtils.isEmpty(texts)) {
             return CaseModelEnum.RESET;
         }
+        
         List<CaseModelEnum> allCaseModel = getAllCaseModel();
         if (CollectionUtils.isEmpty(allCaseModel)) {
             return CaseModelEnum.RESET;
         }
+        
         if (texts.size() == 1) {
             return getCaseModelEnum(texts.get(0), allCaseModel);
         }
+        
+        // 获取所有文本的命名风格集合（去除RESET）
         Set<CaseModelEnum> caseModelEnumSet = texts.stream()
                 .map(text -> getCaseModelEnum(text, allCaseModel))
                 .filter(caseModelEnum -> caseModelEnum != CaseModelEnum.RESET)
                 .collect(Collectors.toSet());
+        
         // 取优先级最高的一个
         for (CaseModelEnum caseModelEnum : allCaseModel) {
             if (caseModelEnumSet.contains(caseModelEnum)) {
                 return caseModelEnum;
             }
         }
+        
         return CaseModelEnum.RESET;
     }
 
@@ -208,42 +212,55 @@ public class CaseUtils {
         if (CollectionUtils.isEmpty(toggleStateList)) {
             return Collections.emptyList();
         }
+        
         List<CaseVo> caseVoList = new ArrayList<>();
         CaseModelEnum nextCaseModel = getNextCaseModel(up, caseModel, allCaseModelEnums);
+        
         // 找到toggleStateList中第一个有变化的命名风格
-        boolean changed = false;
+        boolean foundChangedStyle = false;
         // 最多循环两遍，避免死循环
-        int i = CaseModelEnum.values().length * 2;
-        while (nextCaseModel != caseModel) {
-            if (i-- <= 0) {
-                break;
-            }
+        int maxIterations = CaseModelEnum.values().length * 2;
+        int iterationCount = 0;
+        
+        while (nextCaseModel != caseModel && iterationCount < maxIterations) {
+            iterationCount++;
+            
+            // 检查当前命名风格是否能引起任何文本变化
             for (ToggleState toggleState : toggleStateList) {
                 String selectedText = toggleState.getSelectedText();
                 String originalText = toggleState.getOriginalText();
                 String nextText = nextCaseModel.getConvert().convert(originalText);
+                
+                // 如果转换后的文本不同且符合自定义条件，则找到目标风格
                 if (!nextText.equals(selectedText) && (Objects.isNull(func) || func.apply(nextText))) {
-                    changed = true;
+                    foundChangedStyle = true;
                     break;
                 }
             }
-            if (changed) {
+            
+            if (foundChangedStyle) {
                 break;
             }
+            
+            // 继续查找下一个命名风格
             nextCaseModel = getNextCaseModel(up, nextCaseModel, allCaseModelEnums);
         }
+        
+        // 为所有toggleState生成转换结果
         for (ToggleState toggleState : toggleStateList) {
-            caseVoList.add(new CaseVo(toggleState.getSelectedText(),
-                    nextCaseModel.getConvert().convert(toggleState.getOriginalText()),
+            String convertedText = nextCaseModel.getConvert().convert(toggleState.getOriginalText());
+            caseVoList.add(new CaseVo(
+                    toggleState.getSelectedText(),
+                    convertedText,
                     toggleState.getCaseModelEnum(),
                     nextCaseModel));
         }
+        
         return caseVoList;
     }
 
     /**
-     * 尝试转换
-     * 找到toggleStateList文本中至少有一个变化的命名风格，其他toggleStateList中的文本按照这个命名风格转换
+     * 获取所有可能的转换结果
      *
      * @param func 自定义判断是否符合条件
      */
@@ -254,51 +271,61 @@ public class CaseUtils {
         CaseModelEnum caseModel = toggleState.getCaseModelEnum();
         String selectedText = toggleState.getSelectedText();
         String originalText = toggleState.getOriginalText();
+        
+        // 生成所有转换结果
         for (CaseModelEnum caseModelEnum : allCaseModelEnums) {
             String nextText = caseModelEnum.getConvert().convert(originalText);
             if (Objects.isNull(func) || func.apply(nextText)) {
                 caseVoMap.computeIfAbsent(nextText, k -> new CaseVo(selectedText, nextText, caseModel, caseModelEnum));
             }
         }
-        CaseModelEnum caseModelEnum = toggleState.getCaseModelEnum();
-        caseVoMap.computeIfAbsent(originalText, k -> new CaseVo(selectedText, originalText, caseModelEnum, CaseModelEnum.RESET));
+        
+        // 添加原始文本对应的转换结果
+        caseVoMap.computeIfAbsent(originalText, k -> new CaseVo(selectedText, originalText, caseModel, CaseModelEnum.RESET));
+        
         return new ArrayList<>(caseVoMap.values());
     }
 
     public static @NotNull String selectedText(Editor editor, Caret caret) {
+        // 如果已有选区，直接返回
         String text = caret.getSelectedText();
-        if (text == null || text.isEmpty()) {
-            int start = caret.getOffset();
-            if (start <= 0) {
-                return "";
-            }
-            int end = start;
-            boolean moveLeft = true;
-            boolean moveRight = true;
-            while (moveLeft && start > 0) {
-                start--;
-                caret.setSelection(start, end);
-                String selected = caret.getSelectedText();
-                if (selected == null || SELECT_PATTERN.matcher(selected).find()) {
-                    start++;
-                    moveLeft = false;
-                }
-            }
-            while (moveRight && end < editor.getDocument().getTextLength()) {
-                end++;
-                caret.setSelection(start, end);
-                String selected = caret.getSelectedText();
-                if (selected == null || SELECT_PATTERN.matcher(selected).find()) {
-                    end--;
-                    moveRight = false;
-                }
-            }
-
-            caret.setSelection(start, end);
-            text = caret.getSelectedText();
+        if (text != null && !text.isEmpty()) {
+            return text;
         }
-
-        return Objects.isNull(text) ? "" : text;
+        
+        // 自动扩展选区
+        int start = caret.getOffset();
+        int end = start;
+        Document document = editor.getDocument();
+        int textLength = document.getTextLength();
+        
+        // 向左扩展
+        while (start > 0) {
+            start--;
+            caret.setSelection(start, end);
+            String selected = caret.getSelectedText();
+            if (selected == null || SELECT_PATTERN.matcher(selected).find()) {
+                start++;
+                break;
+            }
+        }
+        
+        // 向右扩展
+        while (end < textLength) {
+            end++;
+            caret.setSelection(start, end);
+            String selected = caret.getSelectedText();
+            if (selected == null || SELECT_PATTERN.matcher(selected).find()) {
+                end--;
+                break;
+            }
+        }
+        
+        // 获取最终选区文本
+        caret.setSelection(start, end);
+        text = caret.getSelectedText();
+        
+        return text != null ? text : "";
     }
 
     /**

@@ -1,7 +1,5 @@
 package com.zj.caseswitcher.interfaces.impl;
 
-import org.jetbrains.annotations.NotNull;
-
 /**
  * CAMEL-CASE
  *
@@ -12,18 +10,6 @@ public class DashUpperCaseModel extends AbsSeparatorCaseModel {
     public static final DashUpperCaseModel INSTANCE = new DashUpperCaseModel();
 
     public DashUpperCaseModel() {
-        super('-', true);
-    }
-
-    @Override
-    public boolean isThisType(@NotNull String text) {
-        // 含有- 且全部大写
-        return text.contains("-") && text.equals(text.toUpperCase());
-    }
-
-    @Override
-    public @NotNull String convert(@NotNull String text) {
-        String convert = DashCaseModel.INSTANCE.convert(text);
-        return convert.toUpperCase();
+        super('-', true, true);
     }
 }

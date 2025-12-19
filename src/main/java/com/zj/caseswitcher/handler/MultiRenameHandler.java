@@ -34,46 +34,50 @@ public class MultiRenameHandler {
                               @NotNull Editor editor,
                               @NotNull Project project) {
         if (CollectionUtils.isEmpty(caretVoList)) {
-            logger.info("multiRename no caret");
+            logger.info("rename: no caret");
             return;
         }
+        
         List<ToggleState> toggleStateList = CaseCache.getMultiToggleState(caretVoList, cacheVo);
         if (CollectionUtils.isEmpty(toggleStateList)) {
-            logger.info("multiRename no toggleState");
+            logger.info("rename: no toggleState");
             return;
         }
+        
         List<CaseModelEnum> allCaseModels = CaseUtils.getAllCaseModel(cacheVo.getOriginalCaseModelEnum());
+        
         // 找到至少有变化的第一个作为下一个命名风格
-        List<CaseVo> caseVoList =
+        List<CaseVo> caseVoList = 
                 CaseUtils.tryConvert(up, toggleStateList, toggleStateList.get(0).getCaseModelEnum(), allCaseModels);
+        
         if (CollectionUtils.isEmpty(caseVoList)) {
-            logger.info("multiRename no change");
+            logger.info("rename: no change");
             return;
         }
+        
+        // 新逻辑：处理caseVoList与caretVoList数量匹配的情况
         if (caseVoList.size() == caretVoList.size()) {
-            logger.info("multiRename new logic before:" + toggleStateList.get(0).getCaseModelEnum());
+            logger.info("rename: new logic before:" + toggleStateList.get(0).getCaseModelEnum());
             for (int i = 0; i < caseVoList.size(); i++) {
                 CaretVo caretVo = caretVoList.get(i);
                 Caret caret = caretVo.getCaret();
                 CaseVo caseVo = caseVoList.get(i);
                 ToggleState toggleState = toggleStateList.get(i);
-                toggleState.setSelectedText(caseVo.getAfterText());
-                toggleState.setCaseModelEnum(caseVo.getAfterCaseModelEnum());
-                Document document = editor.getDocument();
-                try {
-                    WriteCommandAction.runWriteCommandAction(project, () ->
-                            document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), caseVo.getAfterText())
-                    );
-                } catch (ReadOnlyModificationException e) {
-                    HintManager.getInstance().showErrorHint(editor, "File is read-only");
-                    logger.error(e);
+                
+                // 更新转换状态
+                updateToggleState(toggleState, caseVo);
+                
+                // 执行文档替换
+                if (!replaceDocumentText(project, editor, caret, caseVo.getAfterText())) {
                     return;
                 }
             }
-            logger.info("multiRename new logic after:" + toggleStateList.get(0).getCaseModelEnum());
+            logger.info("rename: new logic after:" + toggleStateList.get(0).getCaseModelEnum());
             return;
         }
-        // 老逻辑 可能全部选择都不变
+        
+        // 老逻辑：处理caseVoList与caretVoList数量不匹配的情况
+        logger.info("rename: using old logic");
         for (int i = 0; i < caretVoList.size(); i++) {
             CaretVo caretVo = caretVoList.get(i);
             Caret caret = caretVo.getCaret();
@@ -81,30 +85,71 @@ public class MultiRenameHandler {
             if (StringUtils.isEmpty(selectedText)) {
                 continue;
             }
-            ToggleState toggleState = null;
-            if (toggleStateList.size() == caretVoList.size()) {
-                toggleState = toggleStateList.get(i);
-            }
-            if (toggleState == null) {
-                CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
-                toggleState = new ToggleState(selectedText, selectedText, caseModelEnum);
-            }
+            
+            ToggleState toggleState = getToggleState(toggleStateList, caretVoList, i, selectedText);
+            
             // 判断下一个命名风格
             CaseModelEnum nextCaseModel = CaseUtils.getNextCaseModel(up, toggleState.getCaseModelEnum(), allCaseModels);
-            toggleState.setCaseModelEnum(nextCaseModel);
             String next = nextCaseModel.getConvert().convert(toggleState.getOriginalText());
-            toggleState.setSelectedText(next);
-            logger.info("multiRename toggleState next: " + toggleState);
-            Document document = editor.getDocument();
-            try {
-                WriteCommandAction.runWriteCommandAction(project, () ->
-                        document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), next)
-                );
-            } catch (ReadOnlyModificationException e) {
-                HintManager.getInstance().showErrorHint(editor, "File is read-only");
-                logger.error(e);
+            
+            // 更新转换状态
+            updateToggleState(toggleState, nextCaseModel, next);
+            
+            // 执行文档替换
+            if (!replaceDocumentText(project, editor, caret, next)) {
                 return;
             }
+        }
+    }
+    
+    /**
+     * 获取或创建转换状态
+     */
+    private static ToggleState getToggleState(List<ToggleState> toggleStateList, List<CaretVo> caretVoList, 
+                                            int index, String selectedText) {
+        ToggleState toggleState = null;
+        if (toggleStateList.size() == caretVoList.size()) {
+            toggleState = toggleStateList.get(index);
+        }
+        
+        if (toggleState == null) {
+            CaseModelEnum caseModelEnum = CaseUtils.judgment(selectedText);
+            toggleState = new ToggleState(selectedText, selectedText, caseModelEnum);
+        }
+        return toggleState;
+    }
+    
+    /**
+     * 更新转换状态
+     */
+    private static void updateToggleState(ToggleState toggleState, CaseVo caseVo) {
+        toggleState.setSelectedText(caseVo.getAfterText());
+        toggleState.setCaseModelEnum(caseVo.getAfterCaseModelEnum());
+    }
+    
+    /**
+     * 更新转换状态
+     */
+    private static void updateToggleState(ToggleState toggleState, CaseModelEnum caseModelEnum, String text) {
+        toggleState.setCaseModelEnum(caseModelEnum);
+        toggleState.setSelectedText(text);
+        logger.info("updateToggleState: " + toggleState);
+    }
+    
+    /**
+     * 执行文档替换
+     */
+    private static boolean replaceDocumentText(Project project, Editor editor, Caret caret, String newText) {
+        Document document = editor.getDocument();
+        try {
+            WriteCommandAction.runWriteCommandAction(project, () ->
+                    document.replaceString(caret.getSelectionStart(), caret.getSelectionEnd(), newText)
+            );
+            return true;
+        } catch (ReadOnlyModificationException e) {
+            HintManager.getInstance().showErrorHint(editor, "File is read-only");
+            logger.error("replaceDocumentText: cannot modify read-only file: " + e.getMessage());
+            return false;
         }
     }
 }

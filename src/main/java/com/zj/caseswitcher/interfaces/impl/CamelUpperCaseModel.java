@@ -16,9 +16,19 @@ public class CamelUpperCaseModel extends CamelCaseModel {
         if (text.isEmpty()) {
             return false;
         }
-        // 首字母是大写，并且不是全部大写，并且没有下划线，没有连字符，没有空格
-        return Character.isUpperCase(text.charAt(0)) && !text.equals(text.toUpperCase())
-                && !text.contains("_") && !text.contains("-") && !text.contains(" ");
+        // 没有下划线，没有连字符，没有空格
+        if (text.contains("_") || text.contains("-") || text.contains(" ")) {
+            return false;
+        }
+        // 首字母是大写
+        if (!Character.isUpperCase(text.charAt(0))) {
+            return false;
+        }
+        if (text.length() == 1) {
+            return true;
+        }
+        // 并且不是全部大写
+        return !text.equals(text.toUpperCase());
     }
 
     @Override
