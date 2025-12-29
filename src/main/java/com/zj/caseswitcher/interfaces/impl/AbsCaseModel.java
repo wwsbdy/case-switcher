@@ -99,6 +99,7 @@ public abstract class AbsCaseModel implements ICaseModel {
         if (isFirstChar) {
             appendFirstChar(result, firstChar);
         } else {
+            appendSeparator(result);
             appendFirstCharOfWord(result, firstChar);
         }
         
@@ -109,7 +110,7 @@ public abstract class AbsCaseModel implements ICaseModel {
     }
 
     /**
-     * 添加首字母
+     * 添加文本第一个字符
      */
     protected abstract void appendFirstChar(StringBuilder sb, char c);
 

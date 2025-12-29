@@ -13,41 +13,35 @@ import org.jetbrains.annotations.Nullable;
  */
 @Getter
 public enum CaseModelEnum {
-    CAMEL("camelCase", CamelCaseModel.INSTANCE, 1),
-    CAMEL_UPPER("CamelCase", CamelUpperCaseModel.INSTANCE, 1),
-    SNAKE("camel_case", SnakeCaseModel.INSTANCE, 1),
-    SNAKE_UPPER("CAMEL_CASE", SnakeUpperCaseModel.INSTANCE, 1),
-    DASH("camel-case", DashCaseModel.INSTANCE, 1),
-    DASH_UPPER("CAMEL-CASE", DashUpperCaseModel.INSTANCE, 1),
-    BLANK("camel case", BlankCaseModel.INSTANCE, 1),
-    BLANK_UPPER("Camel Case", BlankUpperCaseModel.INSTANCE, 1),
-    BLANK_ALL_UPPER("CAMEL CASE", BlankAllUpperCaseModel.INSTANCE, 1),
+    CAMEL("camelCase", CamelCaseModel.INSTANCE),
+    CAMEL_UPPER("CamelCase", CamelUpperCaseModel.INSTANCE),
+    SNAKE("camel_case", SnakeCaseModel.INSTANCE),
+    SNAKE_UPPER("CAMEL_CASE", SnakeUpperCaseModel.INSTANCE),
+    DASH("camel-case", DashCaseModel.INSTANCE),
+    DASH_UPPER("CAMEL-CASE", DashUpperCaseModel.INSTANCE),
+    BLANK("camel case", BlankCaseModel.INSTANCE),
+    BLANK_UPPER("Camel Case", BlankUpperCaseModel.INSTANCE),
+    BLANK_ALL_UPPER("CAMEL CASE", BlankAllUpperCaseModel.INSTANCE),
 
     @Deprecated
-    UPPER("UPPER", UpperCaseModel.INSTANCE, 3),
+    UPPER("UPPER", UpperCaseModel.INSTANCE),
     @Deprecated
-    LOWER("lower", LowerCaseModel.INSTANCE, 3),
+    LOWER("lower", LowerCaseModel.INSTANCE),
 
     /**
      * 重置，防止连续转换时，回不到初始文本
      * <p>
      * 不给用户展示
      */
-    RESET("reset", ResetCaseModel.INSTANCE, 0, 1),
+    RESET("reset", ResetCaseModel.INSTANCE),
     ;
 
     private final String name;
     private final ICaseModel convert;
 
-    /**
-     * 分组，在同一分组下的才会相互转换
-     */
-    private final int[] groups;
-
-    CaseModelEnum(String name, ICaseModel convert, int... groups) {
+    CaseModelEnum(String name, ICaseModel convert) {
         this.name = name;
         this.convert = convert;
-        this.groups = groups;
     }
 
     @Nullable
